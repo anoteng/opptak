@@ -1,7 +1,8 @@
 export const SRC = {
   UIS:  { name: "UiS",                  url: "https://www.uis.no/nb/studier/omregning-av-karaktersystem" },
   OSLO: { name: "OsloMet",              url: "https://www.oslomet.no/studier/soknad-og-opptak/poengberegning-rangeringsregler/omregning-av-karakterer" },
-  HH:   { name: "NMBU/Opptakskontoret", url: null }
+  HH:   { name: "NMBU/Opptakskontoret", url: null },
+  ELTE: { name: "ELTE",                 url: "https://www.elte.hu/en/ects-credit-system-and-grading" }
 };
 
 export const COUNTRIES = [
@@ -226,6 +227,17 @@ export const COUNTRIES = [
         { label: "Under 1,0 – Stryk",  value: null }
       ]}
     ]
+  },
+  // ── Ungarn ────────────────────────────────────────────────────
+  {
+    id: "hungary", name: "Ungarn",
+    scales: [{ name: "Ungarsk skala (1–5)", src: SRC.ELTE, grades: [
+      { label: "5 – Jeles (Excellent)",       value: 4.5 },
+      { label: "4 – Jó (Good)",               value: 3   },
+      { label: "3 – Közepes (Satisfactory)",  value: 2   },
+      { label: "2 – Elégséges (Pass)",        value: 1   },
+      { label: "1 – Elégtelen (Fail) – Stryk", value: null }
+    ]}]
   },
   // ── Iran ──────────────────────────────────────────────────────
   {
