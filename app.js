@@ -663,7 +663,13 @@ function renderSaves() {
       if (confirm(`Slette lagret utregning for søkernummer «${s.sokernummer}»?`)) deleteSave(s.id);
     });
 
-    actionTd.append(loadBtn, delBtn);
+    const shareBtn = document.createElement('button');
+    shareBtn.className = 'btn';
+    shareBtn.style.cssText = 'font-size:0.78rem;padding:0.25rem 0.6rem;border:1.5px solid var(--border);color:var(--text-muted);';
+    shareBtn.textContent = 'Del';
+    shareBtn.addEventListener('click', () => copyShareUrl(s, shareBtn));
+
+    actionTd.append(loadBtn, shareBtn, delBtn);
     tr.append(nameTd, ctryTd, avgTd, letterTd, dateTd, actionTd);
     tbody.appendChild(tr);
   });
@@ -694,5 +700,63 @@ sokerInput.addEventListener('keydown', e => {
   if (e.key === 'Escape') cancelSaveBtn.click();
 });
 
+/* ── Share link ── */
+function objToB64(obj) {
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  return btoa(Array.from(bytes, b => String.fromCodePoint(b)).join(''));
+}
+function b64ToObj(b64) {
+  const bytes = Uint8Array.from(atob(b64), c => c.codePointAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+function generateShareUrl(save) {
+  const payload = {
+    countryId:    save.countryId,
+    countryName:  save.countryName,
+    scaleIdx:     save.scaleIdx,
+    scaleName:    save.scaleName,
+    courses:      save.courses,
+    linearConfig: save.linearConfig ?? null,
+    avg:          save.avg,
+    letter:       save.letter,
+    passCredits:  save.passCredits,
+    failCredits:  save.failCredits,
+    savedAt:      save.savedAt
+  };
+  return `${location.origin}${location.pathname}#share=${objToB64(payload)}`;
+}
+
+async function copyShareUrl(save, btn) {
+  const url = generateShareUrl(save);
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    prompt('Kopier delingslenken:', url);
+    return;
+  }
+  const orig = btn.textContent;
+  btn.textContent = 'Kopiert ✓';
+  setTimeout(() => { btn.textContent = orig; }, 2000);
+}
+
+function loadShareFromUrl() {
+  if (!location.hash.startsWith('#share=')) return;
+  try {
+    const save = b64ToObj(location.hash.slice(7));
+    history.replaceState(null, '', location.pathname);
+    loadSave(save);
+    const banner = document.createElement('div');
+    banner.className = 'notice';
+    banner.style.marginBottom = '1rem';
+    banner.textContent = 'Delt resultat — ikke lagret lokalt. Bruk «Lagre utregning» om du vil beholde det.';
+    document.querySelector('main').prepend(banner);
+    setTimeout(() => banner.remove(), 10000);
+  } catch {
+    /* ugyldig lenke – ignorer */
+  }
+}
+
 /* ── Init ── */
 renderSaves();
+loadShareFromUrl();
