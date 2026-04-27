@@ -290,13 +290,13 @@ function buildRow(course) {
   tdNorsk.id = `nv-${course.id}`;
   tdNorsk.textContent = '–';
 
-  // Kjernefag checkbox
+  // Fagkrav checkbox
   const tdCore = document.createElement('td');
   tdCore.className = 'core-check';
   const coreChk = document.createElement('input');
   coreChk.type = 'checkbox';
   coreChk.checked = course.core;
-  coreChk.title = 'Merk som kjernefag';
+  coreChk.title = 'Merk som fagkrav';
   coreChk.addEventListener('change', () => {
     course.core = coreChk.checked;
     recalculate();

@@ -24,7 +24,7 @@ For skalaer med kjente tallgrenser kan du skrive inn tallkarakteren direkte – 
 
 Fyll inn karakter og studiepoeng per emne. Emnenavnet er valgfritt. Ny linje legges automatisk til når karakter og studiepoeng er registrert.
 
-**Kjernefag:** Kryss av «Kjernefag» på relevante emner. Da vises to separate snittberegninger: én for alle emner og én for kjernefag alene, i tråd med §§ i opptaksforskriften om adgang til å bruke kjernefagsnitt.
+**Fagkrav:** Kryss av «Fagkrav» på relevante emner. Da vises to separate snittberegninger: én for alle emner og én for fagkravsemner alene. Dette er i tråd med [Forskrift om studier ved NMBU](https://main-bvxea6i-kdsvgmpf4iwws.eu-5.platformsh.site/sites/default/files/2025-07/Forskrift%20om%20studier%20ved%20NMBU%20med%20utfyllende%20bestemmelser_vedtatt%20US%2009032023_endret%20av%20US%2012062025_2.pdf), som åpner for å beregne snitt på enten hele bachelorgraden eller kun fagkravsemner.
 
 ### 3. Resultat
 
