@@ -360,6 +360,21 @@
             </div>
         </div>
         <div id="scaleBadge" class="scale-badge hidden"></div>
+        <div id="linearWarnWrap" class="hidden" style="margin-top:0.75rem;">
+            <div class="notice" id="linearWarnText"></div>
+        </div>
+        <div id="linearConfigWrap" class="hidden" style="margin-top:0.75rem;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="linearMinPass">Laveste bestått</label>
+                    <input type="number" id="linearMinPass" step="any" placeholder="f.eks. 10">
+                </div>
+                <div class="form-group">
+                    <label for="linearMaxGrade">Høyeste karakter</label>
+                    <input type="number" id="linearMaxGrade" step="any" placeholder="f.eks. 100">
+                </div>
+            </div>
+        </div>
         <div id="refTableWrap" class="hidden" style="margin-top:1rem;">
             <details>
                 <summary>Vis omregningstabellen for valgt skala</summary>
@@ -730,6 +745,14 @@ const COUNTRIES = [
       ]}
     ]
   },
+  // ── Italia ────────────────────────────────────────────────────
+  {
+    id: "italy", name: "Italia",
+    scales: [{ name: "Italiensk skala (18–30 + laud)", type: "linear", minPass: 18, maxGrade: 30, laudGrade: 31,
+      warn: "Omregningen er basert på lineær interpolasjon og ikke statistikk om faktisk bruk av karakterskalaen. Laveste bestått (18) tilsvarer E (1 poeng), høyeste (30) tilsvarer A (5 poeng). 30 con lode skrives «30L».",
+      src: null
+    }]
+  },
   // ── Iran ──────────────────────────────────────────────────────
   // Mer granulær enn UiS, ingen konflikt
   {
@@ -996,6 +1019,14 @@ const COUNTRIES = [
       ]}
     ]
   },
+  // ── Annen skala (lineær) ──────────────────────────────────────
+  {
+    id: "custom_linear", name: "Annen skala (lineær omregning)",
+    scales: [{ name: "Egendefinert lineær skala", type: "linear", minPass: null, maxGrade: null, laudGrade: null,
+      warn: "Lineær interpolasjon: laveste bestått tilsvarer E (1 poeng), høyeste karakter tilsvarer A (5 poeng). Metoden er en forenkling og tar ikke hensyn til statistikk om faktisk bruk av karakterskalaen.",
+      src: null
+    }]
+  },
   // ── USA ───────────────────────────────────────────────────────
   // Kilde NMBU/Opptakskontoret
   {
@@ -1019,10 +1050,12 @@ const COUNTRIES = [
   }
 ];
 
-// Sort: ECTS first, rest alphabetically
+// Sort: ECTS first, custom_linear last, rest alphabetically
 COUNTRIES.sort((a, b) => {
   if (a.id === 'ects') return -1;
   if (b.id === 'ects') return 1;
+  if (a.id === 'custom_linear') return 1;
+  if (b.id === 'custom_linear') return -1;
   return a.name.localeCompare(b.name, 'no');
 });
 
@@ -1062,6 +1095,8 @@ const resLetter       = document.getElementById('resLetter');
 const resLetterDesc   = document.getElementById('resLetterDesc');
 const resCredits      = document.getElementById('resCredits');
 const resFailCredits  = document.getElementById('resFailCredits');
+
+let linearConfig = { minPass: null, maxGrade: null };
 
 /* ── Helpers ── */
 function getCountry() {
@@ -1109,6 +1144,29 @@ function findGradeIndexByNumeric(grades, val) {
   return -1;
 }
 
+/* ── Linear-scale helpers ── */
+function isLinearScale() {
+  const s = getScale();
+  return !!(s && s.type === 'linear');
+}
+function getLinearMinPass() {
+  const s = getScale();
+  if (!s || s.type !== 'linear') return null;
+  return s.minPass !== null ? s.minPass : linearConfig.minPass;
+}
+function getLinearMaxGrade() {
+  const s = getScale();
+  if (!s || s.type !== 'linear') return null;
+  return s.maxGrade !== null ? s.maxGrade : linearConfig.maxGrade;
+}
+function computeLinearValue(raw) {
+  const minPass = getLinearMinPass(), maxGrade = getLinearMaxGrade();
+  if (minPass === null || maxGrade === null || raw === null || raw === undefined) return undefined;
+  if (raw < minPass) return null;
+  if (maxGrade <= minPass) return 5;
+  return Math.min(5, 1 + (raw - minPass) / (maxGrade - minPass) * 4);
+}
+
 /* ── Populate country dropdown ── */
 COUNTRIES.forEach(c => {
   const opt = document.createElement('option');
@@ -1135,9 +1193,14 @@ function updateScaleSelector() {
 /* ── Scale badge + reference table ── */
 function updateScaleInfo() {
   const scale = getScale();
+  const linearWarnWrap   = document.getElementById('linearWarnWrap');
+  const linearConfigWrap = document.getElementById('linearConfigWrap');
+
   if (!scale) {
     scaleBadge.classList.add('hidden');
     refTableWrap.classList.add('hidden');
+    linearWarnWrap.classList.add('hidden');
+    linearConfigWrap.classList.add('hidden');
     return;
   }
 
@@ -1150,6 +1213,16 @@ function updateScaleInfo() {
   scaleBadge.innerHTML = scale.name + srcHtml;
   scaleBadge.classList.remove('hidden');
 
+  if (scale.type === 'linear') {
+    document.getElementById('linearWarnText').textContent = scale.warn || '';
+    linearWarnWrap.classList.toggle('hidden', !scale.warn);
+    linearConfigWrap.classList.toggle('hidden', scale.minPass !== null);
+    refTableWrap.classList.add('hidden');
+    return;
+  }
+
+  linearWarnWrap.classList.add('hidden');
+  linearConfigWrap.classList.add('hidden');
   refTableBody.innerHTML = '';
   scale.grades.forEach(g => {
     const tr = document.createElement('tr');
@@ -1179,50 +1252,79 @@ function buildRow(course) {
 
   // Grade
   const tdGrade = document.createElement('td');
-  const gradeSelect = document.createElement('select');
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = '– Velg karakter –';
-  gradeSelect.appendChild(placeholder);
-  grades.forEach((g, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = g.label;
-    gradeSelect.appendChild(opt);
-  });
-  if (course.gradeIdx !== null) gradeSelect.value = course.gradeIdx;
-  gradeSelect.addEventListener('change', () => {
-    course.gradeIdx = gradeSelect.value === '' ? null : parseInt(gradeSelect.value, 10);
-    updateNorskCell(tr, course);
-    recalculate();
-    maybeAutoAddRow();
-  });
+  const scale = getScale();
 
-  if (isNumericScale(grades)) {
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'display:flex;flex-direction:column;gap:0.25rem;';
-    const numInput = document.createElement('input');
-    numInput.type = 'text';
-    numInput.inputMode = 'decimal';
-    numInput.placeholder = 'Skriv inn tallkarakter';
-    numInput.className = 'num-grade-input';
-    numInput.addEventListener('input', () => {
-      const v = parseFloat(numInput.value.replace(',', '.'));
-      if (!isNaN(v)) {
-        const idx = findGradeIndexByNumeric(grades, v);
-        if (idx >= 0) {
-          gradeSelect.value = idx;
-          course.gradeIdx = idx;
-          updateNorskCell(tr, course);
-          recalculate();
-          maybeAutoAddRow();
-        }
-      }
+  if (scale && scale.type === 'linear') {
+    const li = document.createElement('input');
+    li.type = 'text';
+    li.inputMode = 'decimal';
+    li.placeholder = scale.laudGrade ? `18–30 / 30L` : 'Karakter';
+    li.style.cssText = 'width:110px;';
+    function parseLinearInput(raw) {
+      if (!raw) return null;
+      const s = raw.trim();
+      if (scale.laudGrade && /^\d+[lL]$/.test(s)) return scale.laudGrade;
+      const v = parseFloat(s.replace(',', '.'));
+      return isNaN(v) ? null : v;
+    }
+    if (course.gradeRaw !== null) {
+      li.value = (scale.laudGrade && course.gradeRaw === scale.laudGrade)
+        ? `${scale.laudGrade - 1}L`
+        : String(course.gradeRaw).replace('.', ',');
+    }
+    li.addEventListener('input', () => {
+      course.gradeRaw = parseLinearInput(li.value);
+      updateNorskCell(tr, course);
+      recalculate();
+      maybeAutoAddRow();
     });
-    wrapper.append(numInput, gradeSelect);
-    tdGrade.appendChild(wrapper);
+    tdGrade.appendChild(li);
   } else {
-    tdGrade.appendChild(gradeSelect);
+    const gradeSelect = document.createElement('select');
+    const phOpt = document.createElement('option');
+    phOpt.value = '';
+    phOpt.textContent = '– Velg karakter –';
+    gradeSelect.appendChild(phOpt);
+    grades.forEach((g, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = g.label;
+      gradeSelect.appendChild(opt);
+    });
+    if (course.gradeIdx !== null) gradeSelect.value = course.gradeIdx;
+    gradeSelect.addEventListener('change', () => {
+      course.gradeIdx = gradeSelect.value === '' ? null : parseInt(gradeSelect.value, 10);
+      updateNorskCell(tr, course);
+      recalculate();
+      maybeAutoAddRow();
+    });
+
+    if (isNumericScale(grades)) {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:0.25rem;';
+      const numInput = document.createElement('input');
+      numInput.type = 'text';
+      numInput.inputMode = 'decimal';
+      numInput.placeholder = 'Skriv inn tallkarakter';
+      numInput.className = 'num-grade-input';
+      numInput.addEventListener('input', () => {
+        const v = parseFloat(numInput.value.replace(',', '.'));
+        if (!isNaN(v)) {
+          const idx = findGradeIndexByNumeric(grades, v);
+          if (idx >= 0) {
+            gradeSelect.value = idx;
+            course.gradeIdx = idx;
+            updateNorskCell(tr, course);
+            recalculate();
+            maybeAutoAddRow();
+          }
+        }
+      });
+      wrapper.append(numInput, gradeSelect);
+      tdGrade.appendChild(wrapper);
+    } else {
+      tdGrade.appendChild(gradeSelect);
+    }
   }
 
   // Credits
@@ -1267,54 +1369,64 @@ function buildRow(course) {
 function updateNorskCell(tr, course) {
   const td = tr.querySelector(`#nv-${course.id}`) || tr.cells[3];
   if (!td) return;
-  if (course.gradeIdx === null || course.gradeIdx === undefined) {
-    td.textContent = '–';
-    td.className = '';
+  if (isLinearScale()) {
+    if (course.gradeRaw === null || course.gradeRaw === undefined) {
+      td.textContent = '–'; td.className = ''; return;
+    }
+    const v = computeLinearValue(course.gradeRaw);
+    if (v === undefined) { td.textContent = '–'; td.className = ''; return; }
+    if (v === null) { td.textContent = 'Stryk'; td.className = 'val-fail'; }
+    else { td.textContent = v.toFixed(2).replace('.', ','); td.className = 'val-pass'; }
     return;
+  }
+  if (course.gradeIdx === null || course.gradeIdx === undefined) {
+    td.textContent = '–'; td.className = ''; return;
   }
   const grades = getGrades();
   const g = grades[course.gradeIdx];
   if (!g) { td.textContent = '–'; td.className = ''; return; }
   if (g.value === null) {
-    td.textContent = 'Stryk';
-    td.className = 'val-fail';
+    td.textContent = 'Stryk'; td.className = 'val-fail';
   } else {
-    td.textContent = g.value.toString().replace('.', ',');
-    td.className = 'val-pass';
+    td.textContent = g.value.toString().replace('.', ','); td.className = 'val-pass';
   }
 }
 
 function addCourse() {
-  const course = { id: nextId++, name: '', gradeIdx: null, credits: null };
+  const course = { id: nextId++, name: '', gradeIdx: null, gradeRaw: null, credits: null };
   courses.push(course);
   courseTableBody.appendChild(buildRow(course));
 }
 
 function maybeAutoAddRow() {
   const last = courses[courses.length - 1];
-  if (last && last.gradeIdx !== null && last.credits !== null) {
-    addCourse();
-  }
+  if (!last || last.credits === null) return;
+  const hasGrade = isLinearScale() ? last.gradeRaw !== null : last.gradeIdx !== null;
+  if (hasGrade) addCourse();
 }
 
 /* ── Recalculate result ── */
 function recalculate() {
-  const grades = getGrades();
-  let weightedSum = 0;
-  let passCredits = 0;
-  let failCredits = 0;
-  let anyEntry    = false;
+  const linear = isLinearScale();
+  const grades = linear ? [] : getGrades();
+  let weightedSum = 0, passCredits = 0, failCredits = 0, anyEntry = false;
 
   courses.forEach(course => {
-    if (course.gradeIdx === null || course.credits === null) return;
-    const g = grades[course.gradeIdx];
-    if (!g) return;
-    anyEntry = true;
-    if (g.value === null) {
-      failCredits += course.credits;
+    if (course.credits === null) return;
+    if (linear) {
+      if (course.gradeRaw === null) return;
+      const v = computeLinearValue(course.gradeRaw);
+      if (v === undefined) return;
+      anyEntry = true;
+      if (v === null) failCredits += course.credits;
+      else { weightedSum += v * course.credits; passCredits += course.credits; }
     } else {
-      weightedSum += g.value * course.credits;
-      passCredits += course.credits;
+      if (course.gradeIdx === null) return;
+      const g = grades[course.gradeIdx];
+      if (!g) return;
+      anyEntry = true;
+      if (g.value === null) failCredits += course.credits;
+      else { weightedSum += g.value * course.credits; passCredits += course.credits; }
     }
   });
 
@@ -1372,6 +1484,21 @@ scaleSelect.addEventListener('change', () => {
 
 addCourseBtn.addEventListener('click', addCourse);
 
+/* ── Linear config inputs ── */
+function onLinearConfigChange() {
+  const mp = parseFloat(document.getElementById('linearMinPass').value.replace(',', '.'));
+  const mx = parseFloat(document.getElementById('linearMaxGrade').value.replace(',', '.'));
+  linearConfig.minPass  = isNaN(mp) ? null : mp;
+  linearConfig.maxGrade = isNaN(mx) ? null : mx;
+  courses.forEach(course => {
+    const tr = courseTableBody.querySelector(`tr[data-id="${course.id}"]`);
+    if (tr) updateNorskCell(tr, course);
+  });
+  recalculate();
+}
+document.getElementById('linearMinPass').addEventListener('input', onLinearConfigChange);
+document.getElementById('linearMaxGrade').addEventListener('input', onLinearConfigChange);
+
 /* ── Local storage ─────────────────────────────────────────────── */
 const LS_KEY = 'karakteromregner_v1';
 
@@ -1388,16 +1515,16 @@ function saveCalc(sokernummer) {
   const scale   = getScale();
   if (!country || !scale) return;
 
-  const grades      = getGrades();
-  const scaleIdx    = country.scales.length > 1 ? parseInt(scaleSelect.value, 10) || 0 : 0;
+  const linear   = scale.type === 'linear';
+  const grades   = linear ? [] : getGrades();
+  const scaleIdx = country.scales.length > 1 ? parseInt(scaleSelect.value, 10) || 0 : 0;
   const savedCourses = courses
-    .filter(c => c.gradeIdx !== null && c.credits !== null)
-    .map(c => ({
-      name:       c.name,
-      gradeLabel: grades[c.gradeIdx]?.label ?? '',
-      gradeValue: grades[c.gradeIdx]?.value  ?? null,
-      credits:    c.credits
-    }));
+    .filter(c => linear ? c.gradeRaw !== null && c.credits !== null : c.gradeIdx !== null && c.credits !== null)
+    .map(c => linear
+      ? { name: c.name, gradeRaw: c.gradeRaw, credits: c.credits }
+      : { name: c.name, gradeLabel: grades[c.gradeIdx]?.label ?? '', gradeValue: grades[c.gradeIdx]?.value ?? null, credits: c.credits }
+    );
+  const savedLinearConfig = (linear && scale.minPass === null) ? { ...linearConfig } : null;
 
   const avg = parseFloat(resNumeric.textContent.replace(',', '.'));
   const arr = getSaves();
@@ -1408,12 +1535,13 @@ function saveCalc(sokernummer) {
     countryName: country.name,
     scaleIdx,
     scaleName:   scale.name,
-    courses:     savedCourses,
-    avg:         isNaN(avg) ? null : avg,
-    letter:      resLetter.textContent,
-    passCredits: parseFloat(resCredits.textContent)     || 0,
-    failCredits: parseFloat(resFailCredits.textContent) || 0,
-    savedAt:     new Date().toISOString()
+    courses:           savedCourses,
+    linearConfig:      savedLinearConfig,
+    avg:               isNaN(avg) ? null : avg,
+    letter:            resLetter.textContent,
+    passCredits:       parseFloat(resCredits.textContent)     || 0,
+    failCredits:       parseFloat(resFailCredits.textContent) || 0,
+    savedAt:           new Date().toISOString()
   });
   setSaves(arr);
   renderSaves();
@@ -1429,18 +1557,32 @@ function loadSave(save) {
   updateScaleSelector();
   const country = getCountry();
   if (country && country.scales.length > 1) scaleSelect.value = save.scaleIdx;
+
+  const scale  = getScale();
+  const linear = scale && scale.type === 'linear';
+  if (linear && save.linearConfig) {
+    linearConfig = { ...save.linearConfig };
+    const mpIn = document.getElementById('linearMinPass');
+    const mxIn = document.getElementById('linearMaxGrade');
+    if (mpIn) mpIn.value = linearConfig.minPass ?? '';
+    if (mxIn) mxIn.value = linearConfig.maxGrade ?? '';
+  }
+
   updateScaleInfo();
   resetCourses();
   courseCard.classList.remove('hidden');
 
-  const grades = getGrades();
+  const grades = linear ? [] : getGrades();
   save.courses.forEach(sc => {
-    const gIdx = grades.findIndex(g => g.label === sc.gradeLabel);
-    const course = { id: nextId++, name: sc.name || '', gradeIdx: gIdx >= 0 ? gIdx : null, credits: sc.credits };
+    const gIdx  = linear ? -1 : grades.findIndex(g => g.label === sc.gradeLabel);
+    const course = {
+      id: nextId++, name: sc.name || '',
+      gradeIdx: gIdx >= 0 ? gIdx : null,
+      gradeRaw: sc.gradeRaw ?? null,
+      credits:  sc.credits
+    };
     courses.push(course);
     const tr = courseTableBody.appendChild(buildRow(course));
-    if (gIdx >= 0) tr.querySelector('select').value = gIdx;
-    tr.querySelector('input[type="number"]').value = sc.credits;
     updateNorskCell(tr, course);
   });
 
@@ -1528,6 +1670,9 @@ document.getElementById('clearAllBtn').addEventListener('click', () => {
   scaleGroup.classList.add('hidden');
   scaleBadge.classList.add('hidden');
   refTableWrap.classList.add('hidden');
+  document.getElementById('linearWarnWrap').classList.add('hidden');
+  document.getElementById('linearConfigWrap').classList.add('hidden');
+  linearConfig = { minPass: null, maxGrade: null };
   courseCard.classList.add('hidden');
   saveFormCard.classList.add('hidden');
   resetCourses();
