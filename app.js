@@ -79,7 +79,27 @@ function parseThreshold(label) {
 function isNumericScale(grades) {
   return grades.filter(g => parseThreshold(g.label) !== null).length >= 2;
 }
+function parseInterval(label) {
+  let s = label
+    .replace(/\([^)]*\)/g, '')
+    .replace(/,/g, '.')
+    .replace(/%/g, '')
+    .trim();
+  const m = s.match(/^(-?[\d.]+)\s*[-–]\s*([\d.]+)/);
+  if (m) {
+    const a = parseFloat(m[1]), b = parseFloat(m[2]);
+    return { lo: Math.min(a, b), hi: Math.max(a, b) };
+  }
+  return null;
+}
+
 function findGradeIndexByNumeric(grades, val) {
+  // First pass: exact interval match (handles inverted/bounded scales like German)
+  for (let i = 0; i < grades.length; i++) {
+    const iv = parseInterval(grades[i].label);
+    if (iv && val >= iv.lo && val <= iv.hi) return i;
+  }
+  // Second pass: threshold-based (handles >=  style scales)
   for (let i = 0; i < grades.length; i++) {
     const t = parseThreshold(grades[i].label);
     if (t === null) continue;
