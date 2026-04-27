@@ -47,18 +47,6 @@ Utregninger kan lagres lokalt i nettleseren med søkernummer som referanse. Lagr
 
 ---
 
-## Servering med nginx
-
-Plasser filene i `/var/www/opptak/` (eller annen katalog) og inkluder `nginx-opptak.conf` i server-blokken for `hh-utdanning.nmbu.no`:
-
-```nginx
-location /opptak {
-    alias /var/www/opptak;
-    index index.html;
-    try_files $uri $uri/ /opptak/index.html;
-}
-```
-
 Siden bruker ES-moduler (`type="module"`), noe alle moderne nettlesere støtter. Ingen build-steg er nødvendig.
 
 ---
