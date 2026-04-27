@@ -216,14 +216,24 @@
         .notice a { color: inherit; }
 
         /* ── Result card ── */
+        .result-cards {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.25rem;
+        }
         .result-card {
+            flex: 1 1 280px;
             background: var(--green);
             color: #fff;
             border-radius: var(--radius);
             padding: 1.75rem 1.5rem;
             box-shadow: var(--shadow);
-            margin-bottom: 1.25rem;
         }
+        .result-card--core { background: var(--green-mid); }
+
+        td.core-check { text-align: center; width: 2.5rem; }
+        td.core-check input[type="checkbox"] { width: 1rem; height: 1rem; cursor: pointer; accent-color: var(--green); }
         .result-card h2 {
             font-size: 0.82rem;
             font-weight: 700;
@@ -403,6 +413,7 @@
                         <th>Karakter</th>
                         <th>Studiepoeng</th>
                         <th>Norsk verdi</th>
+                        <th title="Merk kjernefag for separat snittberegning">Kjernefag</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -422,29 +433,53 @@
 
     <!-- Result -->
     <div id="resultSection" class="hidden">
-        <div class="result-card">
-            <h2>Beregnet norsk karaktersnitt</h2>
-            <div class="result-grid">
-                <div class="result-item">
-                    <span class="lbl">Snitt (vektet)</span>
-                    <span class="big" id="resNumeric">–</span>
+        <div class="result-cards">
+            <div class="result-card">
+                <h2 id="resHeading">Beregnet norsk karaktersnitt</h2>
+                <div class="result-grid">
+                    <div class="result-item">
+                        <span class="lbl">Snitt (vektet)</span>
+                        <span class="big" id="resNumeric">–</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="lbl">Norsk bokstavkarakter</span>
+                        <span class="mid" id="resLetter">–</span>
+                        <span class="letter-desc" id="resLetterDesc"></span>
+                    </div>
+                    <div class="result-item">
+                        <span class="lbl">Studiepoeng (bestått)</span>
+                        <span class="sm" id="resCredits">–</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="lbl">Studiepoeng (stryk)</span>
+                        <span class="sm" id="resFailCredits">–</span>
+                    </div>
                 </div>
-                <div class="result-item">
-                    <span class="lbl">Norsk bokstavkarakter</span>
-                    <span class="mid" id="resLetter">–</span>
-                    <span class="letter-desc" id="resLetterDesc"></span>
-                </div>
-                <div class="result-item">
-                    <span class="lbl">Studiepoeng (bestått)</span>
-                    <span class="sm" id="resCredits">–</span>
-                </div>
-                <div class="result-item">
-                    <span class="lbl">Studiepoeng (stryk)</span>
-                    <span class="sm" id="resFailCredits">–</span>
+                <div style="margin-top:1.2rem;">
+                    <button class="btn btn-secondary" id="showSaveFormBtn">Lagre utregning</button>
                 </div>
             </div>
-            <div style="margin-top:1.2rem;">
-                <button class="btn btn-secondary" id="showSaveFormBtn">Lagre utregning</button>
+            <div class="result-card result-card--core hidden" id="coreResultCard">
+                <h2>Snitt – kjernefag</h2>
+                <div class="result-grid">
+                    <div class="result-item">
+                        <span class="lbl">Snitt (vektet)</span>
+                        <span class="big" id="coreResNumeric">–</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="lbl">Norsk bokstavkarakter</span>
+                        <span class="mid" id="coreResLetter">–</span>
+                        <span class="letter-desc" id="coreResLetterDesc"></span>
+                    </div>
+                    <div class="result-item">
+                        <span class="lbl">Studiepoeng (bestått)</span>
+                        <span class="sm" id="coreResCredits">–</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="lbl">Studiepoeng (stryk)</span>
+                        <span class="sm" id="coreResFailCredits">–</span>
+                    </div>
+                </div>
             </div>
         </div>
         <!-- Inline save form -->
@@ -1348,6 +1383,19 @@ function buildRow(course) {
   tdNorsk.id = `nv-${course.id}`;
   tdNorsk.textContent = '–';
 
+  // Kjernefag checkbox
+  const tdCore = document.createElement('td');
+  tdCore.className = 'core-check';
+  const coreChk = document.createElement('input');
+  coreChk.type = 'checkbox';
+  coreChk.checked = course.core;
+  coreChk.title = 'Merk som kjernefag';
+  coreChk.addEventListener('change', () => {
+    course.core = coreChk.checked;
+    recalculate();
+  });
+  tdCore.appendChild(coreChk);
+
   // Delete
   const tdDel = document.createElement('td');
   const delBtn = document.createElement('button');
@@ -1362,7 +1410,7 @@ function buildRow(course) {
   });
   tdDel.appendChild(delBtn);
 
-  tr.append(tdName, tdGrade, tdCredits, tdNorsk, tdDel);
+  tr.append(tdName, tdGrade, tdCredits, tdNorsk, tdCore, tdDel);
   return tr;
 }
 
@@ -1393,7 +1441,7 @@ function updateNorskCell(tr, course) {
 }
 
 function addCourse() {
-  const course = { id: nextId++, name: '', gradeIdx: null, gradeRaw: null, credits: null };
+  const course = { id: nextId++, name: '', gradeIdx: null, gradeRaw: null, credits: null, core: false };
   courses.push(course);
   courseTableBody.appendChild(buildRow(course));
 }
@@ -1406,12 +1454,11 @@ function maybeAutoAddRow() {
 }
 
 /* ── Recalculate result ── */
-function recalculate() {
+function calcStats(subset) {
   const linear = isLinearScale();
   const grades = linear ? [] : getGrades();
   let weightedSum = 0, passCredits = 0, failCredits = 0, anyEntry = false;
-
-  courses.forEach(course => {
+  subset.forEach(course => {
     if (course.credits === null) return;
     if (linear) {
       if (course.gradeRaw === null) return;
@@ -1429,31 +1476,66 @@ function recalculate() {
       else { weightedSum += g.value * course.credits; passCredits += course.credits; }
     }
   });
+  return { weightedSum, passCredits, failCredits, anyEntry };
+}
 
+function renderStats(stats, els) {
+  const { weightedSum, passCredits, failCredits, anyEntry } = stats;
   if (!anyEntry || (passCredits === 0 && failCredits === 0)) {
-    resultSection.classList.add('hidden');
-    return;
+    els.numeric.textContent = '–'; els.letter.textContent = '–';
+    els.letterDesc.textContent = ''; els.credits.textContent = '–';
+    els.failCredits.textContent = '–';
+    return false;
   }
-
   if (passCredits === 0) {
-    resNumeric.textContent     = '–';
-    resLetter.textContent      = 'F';
-    resLetterDesc.textContent  = 'Stryk';
-    resCredits.textContent     = '0 sp';
-    resFailCredits.textContent = failCredits + ' sp';
-    resultSection.classList.remove('hidden');
-    return;
+    els.numeric.textContent    = '–';
+    els.letter.textContent     = 'F';
+    els.letterDesc.textContent = 'Stryk';
+    els.credits.textContent    = '0 sp';
+    els.failCredits.textContent = failCredits + ' sp';
+    return true;
   }
+  const avg = weightedSum / passCredits;
+  const g   = toNorwegianGrade(avg);
+  els.numeric.textContent     = avg.toFixed(2).replace('.', ',');
+  els.letter.textContent      = g.letter;
+  els.letterDesc.textContent  = g.desc;
+  els.credits.textContent     = passCredits + ' sp';
+  els.failCredits.textContent = failCredits > 0 ? failCredits + ' sp' : '0 sp';
+  return true;
+}
 
-  const avg   = weightedSum / passCredits;
-  const grade = toNorwegianGrade(avg);
+function recalculate() {
+  const allStats  = calcStats(courses);
+  const coreCourses = courses.filter(c => c.core);
+  const hasCore   = coreCourses.length > 0 && coreCourses.some(c =>
+    isLinearScale() ? c.gradeRaw !== null && c.credits !== null
+                    : c.gradeIdx !== null && c.credits !== null);
 
-  resNumeric.textContent     = avg.toFixed(2).replace('.', ',');
-  resLetter.textContent      = grade.letter;
-  resLetterDesc.textContent  = grade.desc;
-  resCredits.textContent     = passCredits + ' sp';
-  resFailCredits.textContent = failCredits > 0 ? failCredits + ' sp' : '0 sp';
+  const coreCard    = document.getElementById('coreResultCard');
+  const resHeading  = document.getElementById('resHeading');
+
+  const visible = renderStats(allStats, {
+    numeric: resNumeric, letter: resLetter, letterDesc: resLetterDesc,
+    credits: resCredits, failCredits: resFailCredits
+  });
+  if (!visible) { resultSection.classList.add('hidden'); return; }
+
+  resHeading.textContent = hasCore ? 'Snitt – alle emner' : 'Beregnet norsk karaktersnitt';
   resultSection.classList.remove('hidden');
+
+  if (hasCore) {
+    renderStats(calcStats(coreCourses), {
+      numeric: document.getElementById('coreResNumeric'),
+      letter:  document.getElementById('coreResLetter'),
+      letterDesc: document.getElementById('coreResLetterDesc'),
+      credits: document.getElementById('coreResCredits'),
+      failCredits: document.getElementById('coreResFailCredits')
+    });
+    coreCard.classList.remove('hidden');
+  } else {
+    coreCard.classList.add('hidden');
+  }
 }
 
 /* ── Reset courses when country/scale changes ── */
@@ -1521,8 +1603,8 @@ function saveCalc(sokernummer) {
   const savedCourses = courses
     .filter(c => linear ? c.gradeRaw !== null && c.credits !== null : c.gradeIdx !== null && c.credits !== null)
     .map(c => linear
-      ? { name: c.name, gradeRaw: c.gradeRaw, credits: c.credits }
-      : { name: c.name, gradeLabel: grades[c.gradeIdx]?.label ?? '', gradeValue: grades[c.gradeIdx]?.value ?? null, credits: c.credits }
+      ? { name: c.name, gradeRaw: c.gradeRaw, credits: c.credits, core: c.core }
+      : { name: c.name, gradeLabel: grades[c.gradeIdx]?.label ?? '', gradeValue: grades[c.gradeIdx]?.value ?? null, credits: c.credits, core: c.core }
     );
   const savedLinearConfig = (linear && scale.minPass === null) ? { ...linearConfig } : null;
 
@@ -1579,7 +1661,8 @@ function loadSave(save) {
       id: nextId++, name: sc.name || '',
       gradeIdx: gIdx >= 0 ? gIdx : null,
       gradeRaw: sc.gradeRaw ?? null,
-      credits:  sc.credits
+      credits:  sc.credits,
+      core:     sc.core ?? false
     };
     courses.push(course);
     const tr = courseTableBody.appendChild(buildRow(course));
