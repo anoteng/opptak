@@ -1,4 +1,4 @@
-# Karakteromregner – HH-Utdanning / NMBU
+# Karakteromregner – NMBU
 
 Statisk nettside for omregning av utenlandske karakterer til norsk GPA-skala (A–F / 1–5 poeng), beregnet etter vektet snitt per studiepoeng. Beregnet på saksbehandlere ved opptakskontoret.
 
