@@ -16,48 +16,22 @@ function toNorwegianGrade(numeric) {
   return { letter: "F", desc: "Stryk" };
 }
 
-/* ── State ── */
-let courses = [];
-let nextId  = 0;
-let linearConfig = { minPass: null, maxGrade: null };
+/* ── Global state ── */
+let sections      = [];
+let nextSectionId = 0;
+let nextCourseId  = 0;
 
-/* ── DOM references ── */
-const countrySelect   = document.getElementById('countrySelect');
-const scaleGroup      = document.getElementById('scaleGroup');
-const scaleSelect     = document.getElementById('scaleSelect');
-const scaleBadge      = document.getElementById('scaleBadge');
-const refTableWrap    = document.getElementById('refTableWrap');
-const refTableBody    = document.getElementById('refTableBody');
-const courseCard      = document.getElementById('courseCard');
-const courseTableBody = document.getElementById('courseTableBody');
-const addCourseBtn    = document.getElementById('addCourseBtn');
-const resultSection   = document.getElementById('resultSection');
-const resNumeric      = document.getElementById('resNumeric');
-const resLetter       = document.getElementById('resLetter');
-const resLetterDesc   = document.getElementById('resLetterDesc');
-const resCredits      = document.getElementById('resCredits');
-const resFailCredits  = document.getElementById('resFailCredits');
-const linearWarnWrap      = document.getElementById('linearWarnWrap');
-const linearConfigWrap    = document.getElementById('linearConfigWrap');
-const linearMinPassLabel  = document.querySelector('label[for="linearMinPass"]');
-const linearMaxGradeLabel = document.querySelector('label[for="linearMaxGrade"]');
-const coreResultCard      = document.getElementById('coreResultCard');
-const saveFormCard     = document.getElementById('saveFormCard');
-
-/* ── Scale lookup helpers ── */
-function getCountry() {
-  return COUNTRIES.find(c => c.id === countrySelect.value) || null;
-}
-function getScale() {
-  const c = getCountry();
-  if (!c) return null;
-  const idx = c.scales.length > 1 ? parseInt(scaleSelect.value, 10) : 0;
-  return c.scales[idx] || c.scales[0];
-}
-function getGrades() {
-  const s = getScale();
-  return s ? s.grades : [];
-}
+/* ── Static DOM refs ── */
+const sectionsContainer = document.getElementById('sectionsContainer');
+const addSectionBtn     = document.getElementById('addSectionBtn');
+const resultSection     = document.getElementById('resultSection');
+const resNumeric        = document.getElementById('resNumeric');
+const resLetter         = document.getElementById('resLetter');
+const resLetterDesc     = document.getElementById('resLetterDesc');
+const resCredits        = document.getElementById('resCredits');
+const resFailCredits    = document.getElementById('resFailCredits');
+const coreResultCard    = document.getElementById('coreResultCard');
+const saveFormCard      = document.getElementById('saveFormCard');
 
 /* ── Numeric-scale helpers ── */
 function parseThreshold(label) {
@@ -94,14 +68,13 @@ function parseInterval(label) {
   }
   return null;
 }
-
 function findGradeIndexByNumeric(grades, val) {
-  // First pass: exact interval match (handles inverted/bounded scales like German)
+  // First pass: exact interval match
   for (let i = 0; i < grades.length; i++) {
     const iv = parseInterval(grades[i].label);
     if (iv && val >= iv.lo && val <= iv.hi) return i;
   }
-  // Second pass: threshold-based (handles >=  style scales)
+  // Second pass: threshold-based
   for (let i = 0; i < grades.length; i++) {
     const t = parseThreshold(grades[i].label);
     if (t === null) continue;
@@ -110,77 +83,298 @@ function findGradeIndexByNumeric(grades, val) {
   return -1;
 }
 
-/* ── Linear-scale helpers ── */
-function isLinearScale() {
-  const s = getScale();
+/* ── Per-section scale helpers (all take ctx) ── */
+function getCountry(ctx) {
+  return COUNTRIES.find(c => c.id === ctx.countrySelect.value) || null;
+}
+function getScale(ctx) {
+  const c = getCountry(ctx);
+  if (!c) return null;
+  const idx = c.scales.length > 1 ? parseInt(ctx.scaleSelect.value, 10) : 0;
+  return c.scales[idx] || c.scales[0];
+}
+function getGrades(ctx) {
+  const s = getScale(ctx);
+  return s ? (s.grades || []) : [];
+}
+function isLinearScale(ctx) {
+  const s = getScale(ctx);
   return !!(s && (s.type === 'linear' || s.type === 'linear_inv'));
 }
-function isLinearInvScale() {
-  const s = getScale();
+function isLinearInvScale(ctx) {
+  const s = getScale(ctx);
   return !!(s && s.type === 'linear_inv');
 }
-function getLinearMinPass() {
-  const s = getScale();
-  if (!s || s.type !== 'linear') return null;
-  return s.minPass !== null ? s.minPass : linearConfig.minPass;
-}
-function getLinearMaxGrade() {
-  const s = getScale();
-  if (!s || s.type !== 'linear') return null;
-  return s.maxGrade !== null ? s.maxGrade : linearConfig.maxGrade;
-}
-function computeLinearValue(raw) {
-  const minPass = getLinearMinPass(), maxGrade = getLinearMaxGrade();
+function computeLinearValue(raw, ctx) {
+  const s = getScale(ctx);
+  if (!s || s.type !== 'linear') return undefined;
+  const minPass  = s.minPass  !== null ? s.minPass  : ctx.linearConfig.minPass;
+  const maxGrade = s.maxGrade !== null ? s.maxGrade : ctx.linearConfig.maxGrade;
   if (minPass === null || maxGrade === null || raw === null || raw === undefined) return undefined;
   if (raw < minPass) return null;
   if (maxGrade <= minPass) return 5;
   return Math.min(5, 1 + (raw - minPass) / (maxGrade - minPass) * 4);
 }
-function computeLinearInvValue(raw) {
-  const s = getScale();
-  const bestGrade = (s && s.bestGrade != null) ? s.bestGrade : linearConfig.minPass;
-  const maxPass   = (s && s.maxPass   != null) ? s.maxPass   : linearConfig.maxGrade;
+function computeLinearInvValue(raw, ctx) {
+  const s = getScale(ctx);
+  if (!s || s.type !== 'linear_inv') return undefined;
+  const bestGrade = s.bestGrade != null ? s.bestGrade : ctx.linearConfig.minPass;
+  const maxPass   = s.maxPass   != null ? s.maxPass   : ctx.linearConfig.maxGrade;
   if (bestGrade === null || maxPass === null || raw === null || raw === undefined) return undefined;
   if (raw > maxPass) return null;
   if (maxPass <= bestGrade) return 5;
   return Math.min(5, 1 + (maxPass - raw) / (maxPass - bestGrade) * 4);
 }
-function computeCurrentLinearValue(raw) {
-  return isLinearInvScale() ? computeLinearInvValue(raw) : computeLinearValue(raw);
+function computeCurrentLinearValue(raw, ctx) {
+  return isLinearInvScale(ctx) ? computeLinearInvValue(raw, ctx) : computeLinearValue(raw, ctx);
 }
 
-/* ── Populate country dropdown ── */
-COUNTRIES.forEach(c => {
-  const opt = document.createElement('option');
-  opt.value = c.id;
-  opt.textContent = c.name;
-  countrySelect.appendChild(opt);
-});
+/* ── Section factory ── */
+function createSection() {
+  const sId = nextSectionId++;
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  wrap.dataset.sectionId = sId;
 
-/* ── Update scale selector ── */
-function updateScaleSelector() {
-  const c = getCountry();
-  scaleGroup.classList.toggle('hidden', !c || c.scales.length <= 1);
+  // Title
+  const titleRow = document.createElement('div');
+  titleRow.className = 'card-title';
+  titleRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+  const titleSpan = document.createElement('span');
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn btn-ghost';
+  delBtn.style.cssText = 'font-size:0.78rem;padding:0.2rem 0.6rem;border-color:var(--border);color:var(--text-muted);';
+  delBtn.textContent = 'Fjern seksjon';
+  delBtn.hidden = true;
+  titleRow.append(titleSpan, delBtn);
+  wrap.appendChild(titleRow);
+
+  // Country + scale
+  const formRow = document.createElement('div');
+  formRow.className = 'form-row';
+
+  const countryGroup = document.createElement('div');
+  countryGroup.className = 'form-group';
+  const countryLabel = document.createElement('label');
+  countryLabel.textContent = 'Land';
+  const countrySelect = document.createElement('select');
+  const phOpt = document.createElement('option');
+  phOpt.value = '';
+  phOpt.textContent = '– Velg land –';
+  countrySelect.appendChild(phOpt);
+  COUNTRIES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    countrySelect.appendChild(opt);
+  });
+  countryGroup.append(countryLabel, countrySelect);
+
+  const scaleGroup = document.createElement('div');
+  scaleGroup.className = 'form-group hidden';
+  const scaleLabel = document.createElement('label');
+  scaleLabel.textContent = 'Karakterskala';
+  const scaleSelect = document.createElement('select');
+  scaleGroup.append(scaleLabel, scaleSelect);
+
+  formRow.append(countryGroup, scaleGroup);
+  wrap.appendChild(formRow);
+
+  // Scale badge
+  const scaleBadge = document.createElement('div');
+  scaleBadge.className = 'scale-badge hidden';
+  wrap.appendChild(scaleBadge);
+
+  // Linear warn
+  const linearWarnWrap = document.createElement('div');
+  linearWarnWrap.className = 'hidden';
+  linearWarnWrap.style.marginTop = '0.75rem';
+  const linearWarnText = document.createElement('div');
+  linearWarnText.className = 'notice';
+  linearWarnWrap.appendChild(linearWarnText);
+  wrap.appendChild(linearWarnWrap);
+
+  // Linear config
+  const linearConfigWrap = document.createElement('div');
+  linearConfigWrap.className = 'hidden';
+  linearConfigWrap.style.marginTop = '0.75rem';
+  const linearConfigRow = document.createElement('div');
+  linearConfigRow.className = 'form-row';
+
+  const minPassGroup = document.createElement('div');
+  minPassGroup.className = 'form-group';
+  const linearMinPassLabel = document.createElement('label');
+  linearMinPassLabel.textContent = 'Laveste bestått';
+  const linearMinPassInput = document.createElement('input');
+  linearMinPassInput.type = 'number';
+  linearMinPassInput.step = 'any';
+  linearMinPassInput.placeholder = 'f.eks. 10';
+  minPassGroup.append(linearMinPassLabel, linearMinPassInput);
+
+  const maxGradeGroup = document.createElement('div');
+  maxGradeGroup.className = 'form-group';
+  const linearMaxGradeLabel = document.createElement('label');
+  linearMaxGradeLabel.textContent = 'Høyeste karakter';
+  const linearMaxGradeInput = document.createElement('input');
+  linearMaxGradeInput.type = 'number';
+  linearMaxGradeInput.step = 'any';
+  linearMaxGradeInput.placeholder = 'f.eks. 100';
+  maxGradeGroup.append(linearMaxGradeLabel, linearMaxGradeInput);
+
+  linearConfigRow.append(minPassGroup, maxGradeGroup);
+  linearConfigWrap.appendChild(linearConfigRow);
+  wrap.appendChild(linearConfigWrap);
+
+  // Ref table
+  const refTableWrap = document.createElement('div');
+  refTableWrap.className = 'hidden';
+  refTableWrap.style.marginTop = '1rem';
+  const details = document.createElement('details');
+  const summary = document.createElement('summary');
+  summary.textContent = 'Vis omregningstabellen for valgt skala';
+  const refTableEl = document.createElement('table');
+  refTableEl.className = 'ref-table';
+  refTableEl.innerHTML = '<thead><tr><th>Utenlandsk karakter</th><th>Norsk verdi</th><th>Norsk bokstav</th></tr></thead>';
+  const refTableBody = document.createElement('tbody');
+  refTableEl.appendChild(refTableBody);
+  details.append(summary, refTableEl);
+  refTableWrap.appendChild(details);
+  wrap.appendChild(refTableWrap);
+
+  // Course section (hidden until country chosen)
+  const courseSection = document.createElement('div');
+  courseSection.className = 'hidden';
+
+  const hr = document.createElement('hr');
+  hr.style.cssText = 'border:none;border-top:1px solid var(--border);margin:1.25rem 0 1rem;';
+  courseSection.appendChild(hr);
+
+  const tableWrap = document.createElement('div');
+  tableWrap.className = 'table-wrap';
+  const courseTable = document.createElement('table');
+  courseTable.id = `courseTable-${sId}`;
+  courseTable.innerHTML = `<thead><tr>
+    <th>Emne (valgfritt)</th>
+    <th>Karakter</th>
+    <th>Studiepoeng (ECTS)</th>
+    <th>Norsk verdi</th>
+    <th title="Merk fagkrav for separat snittberegning">Fagkrav</th>
+    <th></th>
+  </tr></thead>`;
+  const courseTableBody = document.createElement('tbody');
+  courseTable.appendChild(courseTableBody);
+  tableWrap.appendChild(courseTable);
+  courseSection.appendChild(tableWrap);
+
+  const addRow = document.createElement('div');
+  addRow.className = 'add-row';
+  const addCourseBtn = document.createElement('button');
+  addCourseBtn.className = 'btn btn-primary';
+  addCourseBtn.textContent = '+ Legg til emne';
+  addRow.appendChild(addCourseBtn);
+  courseSection.appendChild(addRow);
+
+  const notice = document.createElement('div');
+  notice.className = 'notice';
+  notice.innerHTML = `Omregningstabellene er veiledende. Studier med uvanlige karakterskalaer vurderes individuelt.
+    Kilder: <a href="https://www.uis.no/nb/studier/omregning-av-karaktersystem" target="_blank" rel="noopener">UiS</a>,
+    <a href="https://www.oslomet.no/studier/soknad-og-opptak/poengberegning-rangeringsregler/omregning-av-karakterer" target="_blank" rel="noopener">OsloMet</a>
+    og NMBU/Opptakskontoret. Kilde per skala vises i skalabadgen over.`;
+  courseSection.appendChild(notice);
+  wrap.appendChild(courseSection);
+
+  // Context object
+  const ctx = {
+    id: sId,
+    wrap,
+    titleSpan,
+    countrySelect,
+    scaleSelect,
+    scaleGroup,
+    scaleBadge,
+    linearWarnWrap,
+    linearWarnText,
+    linearConfigWrap,
+    linearMinPassLabel,
+    linearMaxGradeLabel,
+    linearMinPassInput,
+    linearMaxGradeInput,
+    refTableWrap,
+    refTableBody,
+    courseSection,
+    courseTableBody,
+    addCourseBtn,
+    sectionDelBtn: delBtn,
+    courses: [],
+    linearConfig: { minPass: null, maxGrade: null }
+  };
+
+  // Events
+  countrySelect.addEventListener('change', () => {
+    updateScaleSelector(ctx);
+    updateScaleInfo(ctx);
+    resetCourses(ctx);
+    if (countrySelect.value) {
+      courseSection.classList.remove('hidden');
+      addCourse(ctx);
+    } else {
+      courseSection.classList.add('hidden');
+    }
+  });
+  scaleSelect.addEventListener('change', () => {
+    updateScaleInfo(ctx);
+    resetCourses(ctx);
+    addCourse(ctx);
+  });
+  addCourseBtn.addEventListener('click', () => addCourse(ctx));
+  linearMinPassInput.addEventListener('input', () => onLinearConfigChange(ctx));
+  linearMaxGradeInput.addEventListener('input', () => onLinearConfigChange(ctx));
+  delBtn.addEventListener('click', () => {
+    sections = sections.filter(s => s.id !== ctx.id);
+    ctx.wrap.remove();
+    updateSectionUI();
+    recalculate();
+  });
+
+  sections.push(ctx);
+  sectionsContainer.appendChild(wrap);
+  updateSectionUI();
+  return ctx;
+}
+
+function updateSectionUI() {
+  const multi = sections.length > 1;
+  sections.forEach((ctx, i) => {
+    ctx.sectionDelBtn.hidden = !multi;
+    ctx.titleSpan.textContent = multi
+      ? `Land og karakterskala (${i + 1})`
+      : 'Land og karakterskala';
+  });
+}
+
+/* ── Scale selector ── */
+function updateScaleSelector(ctx) {
+  const c = getCountry(ctx);
+  ctx.scaleGroup.classList.toggle('hidden', !c || c.scales.length <= 1);
   if (c && c.scales.length > 1) {
-    scaleSelect.innerHTML = '';
+    ctx.scaleSelect.innerHTML = '';
     c.scales.forEach((s, i) => {
       const opt = document.createElement('option');
       opt.value = i;
       opt.textContent = s.name;
-      scaleSelect.appendChild(opt);
+      ctx.scaleSelect.appendChild(opt);
     });
   }
 }
 
 /* ── Scale badge + reference table ── */
-function updateScaleInfo() {
-  const scale = getScale();
-
+function updateScaleInfo(ctx) {
+  const scale = getScale(ctx);
   if (!scale) {
-    scaleBadge.classList.add('hidden');
-    refTableWrap.classList.add('hidden');
-    linearWarnWrap.classList.add('hidden');
-    linearConfigWrap.classList.add('hidden');
+    ctx.scaleBadge.classList.add('hidden');
+    ctx.refTableWrap.classList.add('hidden');
+    ctx.linearWarnWrap.classList.add('hidden');
+    ctx.linearConfigWrap.classList.add('hidden');
     return;
   }
 
@@ -190,46 +384,64 @@ function updateScaleInfo() {
       ? ` &nbsp;&middot;&nbsp; Kilde: <a href="${scale.src.url}" target="_blank" rel="noopener">${scale.src.name}</a>`
       : ` &nbsp;&middot;&nbsp; Kilde: ${scale.src.name}`;
   }
-  scaleBadge.innerHTML = scale.name + srcHtml;
-  scaleBadge.classList.remove('hidden');
+  ctx.scaleBadge.innerHTML = scale.name + srcHtml;
+  ctx.scaleBadge.classList.remove('hidden');
 
   if (scale.type === 'linear' || scale.type === 'linear_inv') {
     if (scale.type === 'linear_inv') {
-      linearMinPassLabel.textContent = 'Beste karakter (laveste tall)';
-      linearMaxGradeLabel.textContent = 'Høyeste bestått';
+      ctx.linearMinPassLabel.textContent = 'Beste karakter (laveste tall)';
+      ctx.linearMaxGradeLabel.textContent = 'Høyeste bestått';
     } else {
-      linearMinPassLabel.textContent = 'Laveste bestått';
-      linearMaxGradeLabel.textContent = 'Høyeste karakter';
+      ctx.linearMinPassLabel.textContent = 'Laveste bestått';
+      ctx.linearMaxGradeLabel.textContent = 'Høyeste karakter';
     }
-    document.getElementById('linearWarnText').textContent = scale.warn || '';
-    linearWarnWrap.classList.toggle('hidden', !scale.warn);
-    const hasFixed = scale.type === 'linear'
-      ? scale.minPass !== null
-      : scale.bestGrade != null;
-    linearConfigWrap.classList.toggle('hidden', hasFixed);
-    refTableWrap.classList.add('hidden');
+    ctx.linearWarnText.textContent = scale.warn || '';
+    ctx.linearWarnWrap.classList.toggle('hidden', !scale.warn);
+    const hasFixed = scale.type === 'linear' ? scale.minPass !== null : scale.bestGrade != null;
+    ctx.linearConfigWrap.classList.toggle('hidden', hasFixed);
+    ctx.refTableWrap.classList.add('hidden');
     return;
   }
 
-  linearWarnWrap.classList.add('hidden');
-  linearConfigWrap.classList.add('hidden');
-  refTableBody.innerHTML = '';
+  ctx.linearWarnWrap.classList.add('hidden');
+  ctx.linearConfigWrap.classList.add('hidden');
+  ctx.refTableBody.innerHTML = '';
   scale.grades.forEach(g => {
     const tr = document.createElement('tr');
     if (g.value === null) tr.classList.add('fail-row');
     const norskStr    = g.value !== null ? g.value.toString().replace('.', ',') : 'Stryk';
     const norskLetter = g.value !== null ? toNorwegianGrade(g.value).letter : 'F';
     tr.innerHTML = `<td>${g.label}</td><td>${norskStr}</td><td>${norskLetter}</td>`;
-    refTableBody.appendChild(tr);
+    ctx.refTableBody.appendChild(tr);
   });
-  refTableWrap.classList.remove('hidden');
+  ctx.refTableWrap.classList.remove('hidden');
+}
+
+/* ── Linear config ── */
+function onLinearConfigChange(ctx) {
+  const mp = parseFloat(ctx.linearMinPassInput.value.replace(',', '.'));
+  const mx = parseFloat(ctx.linearMaxGradeInput.value.replace(',', '.'));
+  ctx.linearConfig.minPass  = isNaN(mp) ? null : mp;
+  ctx.linearConfig.maxGrade = isNaN(mx) ? null : mx;
+  ctx.courses.forEach(course => {
+    const tr = ctx.courseTableBody.querySelector(`tr[data-id="${course.id}"]`);
+    if (tr) updateNorskCell(tr, course, ctx);
+  });
+  recalculate();
 }
 
 /* ── Course row ── */
-function buildRow(course) {
-  const grades = getGrades();
+function buildRow(course, ctx) {
+  const grades = getGrades(ctx);
   const tr = document.createElement('tr');
   tr.dataset.id = course.id;
+
+  // Tab order: grade → credits per row; names after all rows
+  const localIdx    = ctx.courses.indexOf(course);
+  const sBase       = (ctx.id + 1) * 10000;
+  const gradeTabIdx = sBase + localIdx * 2 + 1;
+  const credTabIdx  = sBase + localIdx * 2 + 2;
+  const nameTabIdx  = sBase + 5000 + localIdx;
 
   // Name
   const tdName = document.createElement('td');
@@ -237,12 +449,13 @@ function buildRow(course) {
   nameInput.type = 'text';
   nameInput.placeholder = 'f.eks. Matematikk 1';
   nameInput.value = course.name;
+  nameInput.tabIndex = nameTabIdx;
   nameInput.addEventListener('input', () => { course.name = nameInput.value; });
   tdName.appendChild(nameInput);
 
   // Grade
   const tdGrade = document.createElement('td');
-  const scale = getScale();
+  const scale = getScale(ctx);
 
   if (scale && (scale.type === 'linear' || scale.type === 'linear_inv')) {
     const li = document.createElement('input');
@@ -250,6 +463,7 @@ function buildRow(course) {
     li.inputMode = 'decimal';
     li.placeholder = scale.laudGrade ? `18–30 / 30L` : 'Karakter';
     li.style.cssText = 'width:110px;';
+    li.tabIndex = gradeTabIdx;
     function parseLinearInput(raw) {
       if (!raw) return null;
       const s = raw.trim();
@@ -264,17 +478,18 @@ function buildRow(course) {
     }
     li.addEventListener('input', () => {
       course.gradeRaw = parseLinearInput(li.value);
-      updateNorskCell(tr, course);
+      updateNorskCell(tr, course, ctx);
       recalculate();
-      maybeAutoAddRow();
+      maybeAutoAddRow(ctx);
     });
     tdGrade.appendChild(li);
   } else {
     const gradeSelect = document.createElement('select');
-    const phOpt = document.createElement('option');
-    phOpt.value = '';
-    phOpt.textContent = '– Velg karakter –';
-    gradeSelect.appendChild(phOpt);
+    gradeSelect.tabIndex = gradeTabIdx;
+    const phOpt2 = document.createElement('option');
+    phOpt2.value = '';
+    phOpt2.textContent = '– Velg karakter –';
+    gradeSelect.appendChild(phOpt2);
     grades.forEach((g, i) => {
       const opt = document.createElement('option');
       opt.value = i;
@@ -284,9 +499,9 @@ function buildRow(course) {
     if (course.gradeIdx !== null) gradeSelect.value = course.gradeIdx;
     gradeSelect.addEventListener('change', () => {
       course.gradeIdx = gradeSelect.value === '' ? null : parseInt(gradeSelect.value, 10);
-      updateNorskCell(tr, course);
+      updateNorskCell(tr, course, ctx);
       recalculate();
-      maybeAutoAddRow();
+      maybeAutoAddRow(ctx);
     });
 
     if (isNumericScale(grades)) {
@@ -297,6 +512,8 @@ function buildRow(course) {
       numInput.inputMode = 'decimal';
       numInput.placeholder = 'Skriv inn tallkarakter';
       numInput.className = 'num-grade-input';
+      numInput.tabIndex = gradeTabIdx;
+      gradeSelect.tabIndex = -1; // driven by numInput
       numInput.addEventListener('input', () => {
         const v = parseFloat(numInput.value.replace(',', '.'));
         if (!isNaN(v)) {
@@ -304,9 +521,9 @@ function buildRow(course) {
           if (idx >= 0) {
             gradeSelect.value = idx;
             course.gradeIdx = idx;
-            updateNorskCell(tr, course);
+            updateNorskCell(tr, course, ctx);
             recalculate();
-            maybeAutoAddRow();
+            maybeAutoAddRow(ctx);
           }
         }
       });
@@ -324,12 +541,13 @@ function buildRow(course) {
   credInput.min = '0.5';
   credInput.step = '0.5';
   credInput.placeholder = 'sp';
+  credInput.tabIndex = credTabIdx;
   if (course.credits !== null) credInput.value = course.credits;
   credInput.addEventListener('input', () => {
     const v = parseFloat(credInput.value);
     course.credits = isNaN(v) || v <= 0 ? null : v;
     recalculate();
-    maybeAutoAddRow();
+    maybeAutoAddRow(ctx);
   });
   tdCredits.appendChild(credInput);
 
@@ -338,12 +556,13 @@ function buildRow(course) {
   tdNorsk.id = `nv-${course.id}`;
   tdNorsk.textContent = '–';
 
-  // Fagkrav checkbox
+  // Fagkrav
   const tdCore = document.createElement('td');
   tdCore.className = 'core-check';
   const coreChk = document.createElement('input');
   coreChk.type = 'checkbox';
   coreChk.checked = course.core;
+  coreChk.tabIndex = -1;
   coreChk.title = 'Merk som fagkrav';
   coreChk.addEventListener('change', () => {
     course.core = coreChk.checked;
@@ -357,11 +576,15 @@ function buildRow(course) {
   delBtn.className = 'btn btn-ghost';
   delBtn.title = 'Fjern emne';
   delBtn.textContent = '✕';
+  delBtn.tabIndex = -1;
   delBtn.addEventListener('click', () => {
-    courses = courses.filter(c => c.id !== course.id);
+    ctx.courses = ctx.courses.filter(c => c.id !== course.id);
     tr.remove();
     recalculate();
-    if (courses.length === 0) resultSection.classList.add('hidden');
+    const anyEntry = sections.some(s => s.courses.some(c =>
+      isLinearScale(s) ? c.gradeRaw !== null && c.credits !== null
+                       : c.gradeIdx !== null && c.credits !== null));
+    if (!anyEntry) resultSection.classList.add('hidden');
   });
   tdDel.appendChild(delBtn);
 
@@ -369,14 +592,14 @@ function buildRow(course) {
   return tr;
 }
 
-function updateNorskCell(tr, course) {
+function updateNorskCell(tr, course, ctx) {
   const td = tr.querySelector(`#nv-${course.id}`) || tr.cells[3];
   if (!td) return;
-  if (isLinearScale()) {
+  if (isLinearScale(ctx)) {
     if (course.gradeRaw === null || course.gradeRaw === undefined) {
       td.textContent = '–'; td.className = ''; return;
     }
-    const v = computeCurrentLinearValue(course.gradeRaw);
+    const v = computeCurrentLinearValue(course.gradeRaw, ctx);
     if (v === undefined) { td.textContent = '–'; td.className = ''; return; }
     if (v === null) { td.textContent = 'Stryk'; td.className = 'val-fail'; }
     else { td.textContent = v.toFixed(2).replace('.', ','); td.className = 'val-pass'; }
@@ -385,7 +608,7 @@ function updateNorskCell(tr, course) {
   if (course.gradeIdx === null || course.gradeIdx === undefined) {
     td.textContent = '–'; td.className = ''; return;
   }
-  const grades = getGrades();
+  const grades = getGrades(ctx);
   const g = grades[course.gradeIdx];
   if (!g) { td.textContent = '–'; td.className = ''; return; }
   if (g.value === null) {
@@ -395,41 +618,53 @@ function updateNorskCell(tr, course) {
   }
 }
 
-function addCourse() {
-  const course = { id: nextId++, name: '', gradeIdx: null, gradeRaw: null, credits: null, core: false };
-  courses.push(course);
-  courseTableBody.appendChild(buildRow(course));
+function addCourse(ctx) {
+  const course = { id: nextCourseId++, name: '', gradeIdx: null, gradeRaw: null, credits: null, core: false };
+  ctx.courses.push(course);
+  ctx.courseTableBody.appendChild(buildRow(course, ctx));
 }
 
-function maybeAutoAddRow() {
-  const last = courses[courses.length - 1];
+function maybeAutoAddRow(ctx) {
+  const last = ctx.courses[ctx.courses.length - 1];
   if (!last || last.credits === null) return;
-  const hasGrade = isLinearScale() ? last.gradeRaw !== null : last.gradeIdx !== null;
-  if (hasGrade) addCourse();
+  const hasGrade = isLinearScale(ctx) ? last.gradeRaw !== null : last.gradeIdx !== null;
+  if (hasGrade) addCourse(ctx);
 }
 
-/* ── Recalculate result ── */
-function calcStats(subset) {
-  const linear = isLinearScale();
-  const grades = linear ? [] : getGrades();
-  let weightedSum = 0, passCredits = 0, failCredits = 0, anyEntry = false;
-  subset.forEach(course => {
+/* ── Recalculate (combined across all sections) ── */
+function sectionToItems(ctx) {
+  const linear = isLinearScale(ctx);
+  const grades = linear ? [] : getGrades(ctx);
+  const items = [], coreItems = [];
+  ctx.courses.forEach(course => {
     if (course.credits === null) return;
+    let value, isFail;
     if (linear) {
       if (course.gradeRaw === null) return;
-      const v = computeCurrentLinearValue(course.gradeRaw);
+      const v = computeCurrentLinearValue(course.gradeRaw, ctx);
       if (v === undefined) return;
-      anyEntry = true;
-      if (v === null) failCredits += course.credits;
-      else { weightedSum += v * course.credits; passCredits += course.credits; }
+      isFail = (v === null);
+      value = isFail ? 0 : v;
     } else {
       if (course.gradeIdx === null) return;
       const g = grades[course.gradeIdx];
       if (!g) return;
-      anyEntry = true;
-      if (g.value === null) failCredits += course.credits;
-      else { weightedSum += g.value * course.credits; passCredits += course.credits; }
+      isFail = (g.value === null);
+      value = isFail ? 0 : g.value;
     }
+    const item = { value, credits: course.credits, isFail, core: course.core };
+    items.push(item);
+    if (course.core) coreItems.push(item);
+  });
+  return { items, coreItems };
+}
+
+function calcStats(items) {
+  let weightedSum = 0, passCredits = 0, failCredits = 0, anyEntry = false;
+  items.forEach(({ value, credits, isFail }) => {
+    anyEntry = true;
+    if (isFail) failCredits += credits;
+    else { weightedSum += value * credits; passCredits += credits; }
   });
   return { weightedSum, passCredits, failCredits, anyEntry };
 }
@@ -461,13 +696,15 @@ function renderStats(stats, els) {
 }
 
 function recalculate() {
-  const allStats    = calcStats(courses);
-  const coreCourses = courses.filter(c => c.core);
-  const hasCore     = coreCourses.length > 0 && coreCourses.some(c =>
-    isLinearScale() ? c.gradeRaw !== null && c.credits !== null
-                    : c.gradeIdx !== null && c.credits !== null);
+  let allItems = [], coreItems = [];
+  sections.forEach(ctx => {
+    const { items, coreItems: ci } = sectionToItems(ctx);
+    allItems = allItems.concat(items);
+    coreItems = coreItems.concat(ci);
+  });
 
-  const visible = renderStats(allStats, {
+  const hasCore = coreItems.length > 0;
+  const visible = renderStats(calcStats(allItems), {
     numeric: resNumeric, letter: resLetter, letterDesc: resLetterDesc,
     credits: resCredits, failCredits: resFailCredits
   });
@@ -478,7 +715,7 @@ function recalculate() {
   resultSection.classList.remove('hidden');
 
   if (hasCore) {
-    renderStats(calcStats(coreCourses), {
+    renderStats(calcStats(coreItems), {
       numeric:     document.getElementById('coreResNumeric'),
       letter:      document.getElementById('coreResLetter'),
       letterDesc:  document.getElementById('coreResLetterDesc'),
@@ -491,62 +728,11 @@ function recalculate() {
   }
 }
 
-/* ── Reset courses ── */
-function resetCourses() {
-  courses = [];
-  courseTableBody.innerHTML = '';
-  resultSection.classList.add('hidden');
-}
-
-/* ── Country / scale event listeners ── */
-countrySelect.addEventListener('change', () => {
-  updateScaleSelector();
-  updateScaleInfo();
-  resetCourses();
-  if (countrySelect.value) {
-    courseCard.classList.remove('hidden');
-    addCourse();
-  } else {
-    courseCard.classList.add('hidden');
-  }
-});
-
-scaleSelect.addEventListener('change', () => {
-  updateScaleInfo();
-  resetCourses();
-  addCourse();
-});
-
-addCourseBtn.addEventListener('click', addCourse);
-
-/* ── Linear config inputs ── */
-function onLinearConfigChange() {
-  const mp = parseFloat(document.getElementById('linearMinPass').value.replace(',', '.'));
-  const mx = parseFloat(document.getElementById('linearMaxGrade').value.replace(',', '.'));
-  linearConfig.minPass  = isNaN(mp) ? null : mp;
-  linearConfig.maxGrade = isNaN(mx) ? null : mx;
-  courses.forEach(course => {
-    const tr = courseTableBody.querySelector(`tr[data-id="${course.id}"]`);
-    if (tr) updateNorskCell(tr, course);
-  });
+function resetCourses(ctx) {
+  ctx.courses = [];
+  ctx.courseTableBody.innerHTML = '';
   recalculate();
 }
-document.getElementById('linearMinPass').addEventListener('input', onLinearConfigChange);
-document.getElementById('linearMaxGrade').addEventListener('input', onLinearConfigChange);
-
-/* ── Clear form ── */
-document.getElementById('clearAllBtn').addEventListener('click', () => {
-  countrySelect.value = '';
-  scaleGroup.classList.add('hidden');
-  scaleBadge.classList.add('hidden');
-  refTableWrap.classList.add('hidden');
-  linearWarnWrap.classList.add('hidden');
-  linearConfigWrap.classList.add('hidden');
-  linearConfig = { minPass: null, maxGrade: null };
-  courseCard.classList.add('hidden');
-  saveFormCard.classList.add('hidden');
-  resetCourses();
-});
 
 /* ── Local storage ── */
 const LS_KEY = 'karakteromregner_v1';
@@ -559,39 +745,60 @@ function setSaves(arr) {
   localStorage.setItem(LS_KEY, JSON.stringify(arr));
 }
 
-function saveCalc(sokernummer) {
-  const country = getCountry();
-  const scale   = getScale();
-  if (!country || !scale) return;
+function normalizeSave(save) {
+  if (save.sections) return save;
+  // Backward compat: old single-section format
+  return {
+    ...save,
+    sections: [{
+      countryId:    save.countryId,
+      countryName:  save.countryName,
+      scaleIdx:     save.scaleIdx    ?? 0,
+      scaleName:    save.scaleName   ?? '',
+      courses:      save.courses     ?? [],
+      linearConfig: save.linearConfig ?? null
+    }]
+  };
+}
 
-  const linear   = scale.type === 'linear' || scale.type === 'linear_inv';
-  const grades   = linear ? [] : getGrades();
-  const scaleIdx = country.scales.length > 1 ? parseInt(scaleSelect.value, 10) || 0 : 0;
-  const savedCourses = courses
-    .filter(c => linear ? c.gradeRaw !== null && c.credits !== null
-                        : c.gradeIdx !== null && c.credits !== null)
-    .map(c => linear
-      ? { name: c.name, gradeRaw: c.gradeRaw, credits: c.credits, core: c.core }
-      : { name: c.name, gradeLabel: grades[c.gradeIdx]?.label ?? '',
-          gradeValue: grades[c.gradeIdx]?.value ?? null, credits: c.credits, core: c.core }
+function saveCalc(sokernummer) {
+  const savedSections = sections.map(ctx => {
+    const country = getCountry(ctx);
+    const scale   = getScale(ctx);
+    if (!country || !scale) return null;
+    const linear   = scale.type === 'linear' || scale.type === 'linear_inv';
+    const grades   = linear ? [] : getGrades(ctx);
+    const scaleIdx = country.scales.length > 1 ? parseInt(ctx.scaleSelect.value, 10) || 0 : 0;
+    const savedCourses = ctx.courses
+      .filter(c => linear ? c.gradeRaw !== null && c.credits !== null
+                          : c.gradeIdx !== null && c.credits !== null)
+      .map(c => linear
+        ? { name: c.name, gradeRaw: c.gradeRaw, credits: c.credits, core: c.core }
+        : { name: c.name, gradeLabel: grades[c.gradeIdx]?.label ?? '',
+            gradeValue: grades[c.gradeIdx]?.value ?? null, credits: c.credits, core: c.core }
+      );
+    const needsConfig = linear && (
+      (scale.type === 'linear'     && scale.minPass   === null) ||
+      (scale.type === 'linear_inv' && scale.bestGrade == null)
     );
-  const needsConfig = linear && (
-    (scale.type === 'linear'     && scale.minPass   === null) ||
-    (scale.type === 'linear_inv' && scale.bestGrade == null)
-  );
-  const savedLinearConfig = needsConfig ? { ...linearConfig } : null;
+    return {
+      countryId:    country.id,
+      countryName:  country.name,
+      scaleIdx,
+      scaleName:    scale.name,
+      courses:      savedCourses,
+      linearConfig: needsConfig ? { ...ctx.linearConfig } : null
+    };
+  }).filter(Boolean);
+
+  if (savedSections.length === 0) return;
 
   const avg = parseFloat(resNumeric.textContent.replace(',', '.'));
   const arr = getSaves();
   arr.unshift({
     id:           Date.now(),
     sokernummer,
-    countryId:    country.id,
-    countryName:  country.name,
-    scaleIdx,
-    scaleName:    scale.name,
-    courses:      savedCourses,
-    linearConfig: savedLinearConfig,
+    sections:     savedSections,
     avg:          isNaN(avg) ? null : avg,
     letter:       resLetter.textContent,
     passCredits:  parseFloat(resCredits.textContent)     || 0,
@@ -608,43 +815,50 @@ function deleteSave(id) {
 }
 
 function loadSave(save) {
-  countrySelect.value = save.countryId;
-  updateScaleSelector();
-  const country = getCountry();
-  if (country && country.scales.length > 1) scaleSelect.value = save.scaleIdx;
+  const normalized = normalizeSave(save);
 
-  const scale  = getScale();
-  const linear = scale && (scale.type === 'linear' || scale.type === 'linear_inv');
-  if (linear && save.linearConfig) {
-    linearConfig = { ...save.linearConfig };
-    const mpIn = document.getElementById('linearMinPass');
-    const mxIn = document.getElementById('linearMaxGrade');
-    if (mpIn) mpIn.value = linearConfig.minPass ?? '';
-    if (mxIn) mxIn.value = linearConfig.maxGrade ?? '';
-  }
+  // Remove existing sections
+  sections.forEach(ctx => ctx.wrap.remove());
+  sections = [];
 
-  updateScaleInfo();
-  resetCourses();
-  courseCard.classList.remove('hidden');
+  normalized.sections.forEach(sec => {
+    const ctx = createSection();
+    ctx.countrySelect.value = sec.countryId;
+    updateScaleSelector(ctx);
+    const country = getCountry(ctx);
+    if (country && country.scales.length > 1) ctx.scaleSelect.value = sec.scaleIdx;
 
-  const grades = linear ? [] : getGrades();
-  save.courses.forEach(sc => {
-    const gIdx = linear ? -1 : grades.findIndex(g => g.label === sc.gradeLabel);
-    const course = {
-      id:       nextId++,
-      name:     sc.name || '',
-      gradeIdx: gIdx >= 0 ? gIdx : null,
-      gradeRaw: sc.gradeRaw ?? null,
-      credits:  sc.credits,
-      core:     sc.core ?? false
-    };
-    courses.push(course);
-    const tr = courseTableBody.appendChild(buildRow(course));
-    updateNorskCell(tr, course);
+    const scale  = getScale(ctx);
+    const linear = scale && (scale.type === 'linear' || scale.type === 'linear_inv');
+    if (linear && sec.linearConfig) {
+      ctx.linearConfig = { ...sec.linearConfig };
+      ctx.linearMinPassInput.value  = ctx.linearConfig.minPass  ?? '';
+      ctx.linearMaxGradeInput.value = ctx.linearConfig.maxGrade ?? '';
+    }
+
+    updateScaleInfo(ctx);
+    resetCourses(ctx);
+    ctx.courseSection.classList.remove('hidden');
+
+    const grades = linear ? [] : getGrades(ctx);
+    sec.courses.forEach(sc => {
+      const gIdx = linear ? -1 : grades.findIndex(g => g.label === sc.gradeLabel);
+      const course = {
+        id:       nextCourseId++,
+        name:     sc.name || '',
+        gradeIdx: gIdx >= 0 ? gIdx : null,
+        gradeRaw: sc.gradeRaw ?? null,
+        credits:  sc.credits,
+        core:     sc.core ?? false
+      };
+      ctx.courses.push(course);
+      const tr = ctx.courseTableBody.appendChild(buildRow(course, ctx));
+      updateNorskCell(tr, course, ctx);
+    });
   });
 
   recalculate();
-  courseCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  sectionsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderSaves() {
@@ -657,6 +871,7 @@ function renderSaves() {
   tbody.innerHTML = '';
 
   arr.forEach(s => {
+    const normalized = normalizeSave(s);
     const tr  = document.createElement('tr');
     const dt  = new Date(s.savedAt);
     const dts = dt.toLocaleString('no-NO', {
@@ -665,11 +880,14 @@ function renderSaves() {
     });
     const avgStr = s.avg !== null ? s.avg.toFixed(2).replace('.', ',') : '–';
 
+    const countryStr = normalized.sections.map(sec => sec.countryName).join(', ');
+    const scaleStr   = normalized.sections.map(sec => sec.scaleName).join(' / ');
+
     const nameTd = document.createElement('td');
     nameTd.innerHTML = `<strong>${s.sokernummer}</strong>`;
 
     const ctryTd = document.createElement('td');
-    ctryTd.innerHTML = `${s.countryName}<br><span class="saved-country">${s.scaleName}</span>`;
+    ctryTd.innerHTML = `${countryStr}<br><span class="saved-country">${scaleStr}</span>`;
 
     const avgTd    = document.createElement('td'); avgTd.textContent    = avgStr;
     const letterTd = document.createElement('td'); letterTd.textContent = s.letter;
@@ -718,9 +936,7 @@ showSaveFormBtn.addEventListener('click', () => {
   sokerInput.value = '';
   sokerInput.focus();
 });
-cancelSaveBtn.addEventListener('click', () => {
-  saveFormCard.classList.add('hidden');
-});
+cancelSaveBtn.addEventListener('click', () => saveFormCard.classList.add('hidden'));
 confirmSaveBtn.addEventListener('click', () => {
   const val = sokerInput.value.trim();
   if (!val) { sokerInput.focus(); return; }
@@ -731,6 +947,18 @@ sokerInput.addEventListener('keydown', e => {
   if (e.key === 'Enter')  confirmSaveBtn.click();
   if (e.key === 'Escape') cancelSaveBtn.click();
 });
+
+/* ── Clear form ── */
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+  sections.forEach(ctx => ctx.wrap.remove());
+  sections = [];
+  createSection();
+  saveFormCard.classList.add('hidden');
+  resultSection.classList.add('hidden');
+});
+
+/* ── Add section ── */
+addSectionBtn.addEventListener('click', () => createSection());
 
 /* ── Share link ── */
 function objToB64(obj) {
@@ -743,18 +971,14 @@ function b64ToObj(b64) {
 }
 
 function generateShareUrl(save) {
+  const normalized = normalizeSave(save);
   const payload = {
-    countryId:    save.countryId,
-    countryName:  save.countryName,
-    scaleIdx:     save.scaleIdx,
-    scaleName:    save.scaleName,
-    courses:      save.courses,
-    linearConfig: save.linearConfig ?? null,
-    avg:          save.avg,
-    letter:       save.letter,
-    passCredits:  save.passCredits,
-    failCredits:  save.failCredits,
-    savedAt:      save.savedAt
+    sections:    normalized.sections,
+    avg:         save.avg,
+    letter:      save.letter,
+    passCredits: save.passCredits,
+    failCredits: save.failCredits,
+    savedAt:     save.savedAt
   };
   return `${location.origin}${location.pathname}#share=${objToB64(payload)}`;
 }
@@ -775,9 +999,9 @@ async function copyShareUrl(save, btn) {
 function loadShareFromUrl() {
   if (!location.hash.startsWith('#share=')) return;
   try {
-    const save = b64ToObj(location.hash.slice(7));
+    const payload = b64ToObj(location.hash.slice(7));
     history.replaceState(null, '', location.pathname);
-    loadSave(save);
+    loadSave(payload);
     const banner = document.createElement('div');
     banner.className = 'notice';
     banner.style.marginBottom = '1rem';
@@ -790,5 +1014,6 @@ function loadShareFromUrl() {
 }
 
 /* ── Init ── */
+createSection();
 renderSaves();
 loadShareFromUrl();

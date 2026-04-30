@@ -12,90 +12,17 @@
     <div class="header-inner">
         <div class="label">HH-Utdanning · NMBU</div>
         <h1>Omregning av utenlandske karakterer</h1>
-        <p>Beregn norsk karaktersnitt (A–F) basert på utenlandske karakterer og studiepoeng</p>
+        <p>Beregn norsk karaktersnitt (A–F) basert på utenlandske karakterer og studiepoeng (ECTS)</p>
     </div>
 </header>
 
 <main>
 
-    <!-- Step 1: Country + scale -->
-    <div class="card">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-            <span>1 — Velg land og karakterskala</span>
-            <button class="btn btn-ghost" id="clearAllBtn" style="font-size:0.78rem;padding:0.2rem 0.6rem;border-color:var(--border);color:var(--text-muted);">Tøm skjema</button>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label for="countrySelect">Land</label>
-                <select id="countrySelect">
-                    <option value="">– Velg land –</option>
-                </select>
-            </div>
-            <div class="form-group hidden" id="scaleGroup">
-                <label for="scaleSelect">Karakterskala</label>
-                <select id="scaleSelect"></select>
-            </div>
-        </div>
-        <div id="scaleBadge" class="scale-badge hidden"></div>
-        <div id="linearWarnWrap" class="hidden" style="margin-top:0.75rem;">
-            <div class="notice" id="linearWarnText"></div>
-        </div>
-        <div id="linearConfigWrap" class="hidden" style="margin-top:0.75rem;">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="linearMinPass">Laveste bestått</label>
-                    <input type="number" id="linearMinPass" step="any" placeholder="f.eks. 10">
-                </div>
-                <div class="form-group">
-                    <label for="linearMaxGrade">Høyeste karakter</label>
-                    <input type="number" id="linearMaxGrade" step="any" placeholder="f.eks. 100">
-                </div>
-            </div>
-        </div>
-        <div id="refTableWrap" class="hidden" style="margin-top:1rem;">
-            <details>
-                <summary>Vis omregningstabellen for valgt skala</summary>
-                <table class="ref-table" id="refTable">
-                    <thead>
-                        <tr>
-                            <th>Utenlandsk karakter</th>
-                            <th>Norsk verdi</th>
-                            <th>Norsk bokstav</th>
-                        </tr>
-                    </thead>
-                    <tbody id="refTableBody"></tbody>
-                </table>
-            </details>
-        </div>
-    </div>
+    <div id="sectionsContainer"></div>
 
-    <!-- Step 2: Courses -->
-    <div class="card hidden" id="courseCard">
-        <div class="card-title">2 — Legg til emner</div>
-        <div class="table-wrap">
-            <table id="courseTable">
-                <thead>
-                    <tr>
-                        <th>Emne (valgfritt)</th>
-                        <th>Karakter</th>
-                        <th>Studiepoeng</th>
-                        <th>Norsk verdi</th>
-                        <th title="Merk fagkrav for separat snittberegning">Fagkrav</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="courseTableBody"></tbody>
-            </table>
-        </div>
-        <div class="add-row">
-            <button class="btn btn-primary" id="addCourseBtn">+ Legg til emne</button>
-        </div>
-        <div class="notice">
-            Omregningstabellene er veiledende. Studier med uvanlige karakterskalaer vurderes individuelt.
-            Kilder: <a href="https://www.uis.no/nb/studier/omregning-av-karaktersystem" target="_blank" rel="noopener">UiS</a>,
-            <a href="https://www.oslomet.no/studier/soknad-og-opptak/poengberegning-rangeringsregler/omregning-av-karakterer" target="_blank" rel="noopener">OsloMet</a>
-            og NMBU/Opptakskontoret. Kilde per skala vises i skalabadgen over.
-        </div>
+    <div class="section-actions">
+        <button class="btn btn-outline" id="addSectionBtn">+ Legg til fra et annet land</button>
+        <button class="btn btn-ghost" id="clearAllBtn" style="border-color:var(--border);color:var(--text-muted);">Tøm skjema</button>
     </div>
 
     <!-- Result -->

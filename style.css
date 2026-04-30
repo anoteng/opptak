@@ -292,6 +292,22 @@ details summary:hover { text-decoration: underline; }
 .ref-table tr:last-child td { border-bottom: none; }
 .ref-table .fail-row td { color: var(--fail-color); }
 
+/* ── Outline button (for section actions area) ── */
+.btn-outline {
+    background: transparent;
+    color: var(--green);
+    border: 1.5px solid var(--green);
+}
+.btn-outline:hover { background: var(--green-light); }
+
+/* ── Section actions row ── */
+.section-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
 /* ── Secondary button ── */
 .btn-secondary {
     background: rgba(255,255,255,0.15);
