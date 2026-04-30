@@ -492,14 +492,25 @@ export const COUNTRIES = [
       warn: "Lineær interpolasjon: laveste bestått tilsvarer E (1 poeng), høyeste karakter tilsvarer A (5 poeng). Metoden er en forenkling og tar ikke hensyn til statistikk om faktisk bruk av karakterskalaen.",
       src: null
     }]
+  },
+  // ── Annen skala (invertert lineær) ────────────────────────────
+  {
+    id: "custom_linear_inv", name: "Annen skala, invertert (laveste tall er best)",
+    scales: [{ name: "Egendefinert invertert lineær skala", type: "linear_inv", bestGrade: null, maxPass: null,
+      warn: "Lineær interpolasjon (invertert skala): beste karakter (laveste tall) tilsvarer A (5 poeng), høyeste bestått tilsvarer E (1 poeng). Karakterer over høyeste bestått regnes som stryk. Metoden er en forenkling og tar ikke hensyn til statistikk om faktisk bruk av karakterskalaen.",
+      src: null
+    }]
   }
 ];
 
-// ECTS first, custom_linear last, rest alphabetically
+// ECTS first, custom_linear* last (in order), rest alphabetically
+const CUSTOM_LAST = ['custom_linear', 'custom_linear_inv'];
 COUNTRIES.sort((a, b) => {
   if (a.id === 'ects') return -1;
   if (b.id === 'ects') return 1;
-  if (a.id === 'custom_linear') return 1;
-  if (b.id === 'custom_linear') return -1;
+  const ai = CUSTOM_LAST.indexOf(a.id), bi = CUSTOM_LAST.indexOf(b.id);
+  if (ai >= 0 && bi >= 0) return ai - bi;
+  if (ai >= 0) return 1;
+  if (bi >= 0) return -1;
   return a.name.localeCompare(b.name, 'no');
 });

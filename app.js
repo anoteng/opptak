@@ -37,9 +37,11 @@ const resLetter       = document.getElementById('resLetter');
 const resLetterDesc   = document.getElementById('resLetterDesc');
 const resCredits      = document.getElementById('resCredits');
 const resFailCredits  = document.getElementById('resFailCredits');
-const linearWarnWrap   = document.getElementById('linearWarnWrap');
-const linearConfigWrap = document.getElementById('linearConfigWrap');
-const coreResultCard   = document.getElementById('coreResultCard');
+const linearWarnWrap      = document.getElementById('linearWarnWrap');
+const linearConfigWrap    = document.getElementById('linearConfigWrap');
+const linearMinPassLabel  = document.querySelector('label[for="linearMinPass"]');
+const linearMaxGradeLabel = document.querySelector('label[for="linearMaxGrade"]');
+const coreResultCard      = document.getElementById('coreResultCard');
 const saveFormCard     = document.getElementById('saveFormCard');
 
 /* ── Scale lookup helpers ── */
@@ -111,7 +113,11 @@ function findGradeIndexByNumeric(grades, val) {
 /* ── Linear-scale helpers ── */
 function isLinearScale() {
   const s = getScale();
-  return !!(s && s.type === 'linear');
+  return !!(s && (s.type === 'linear' || s.type === 'linear_inv'));
+}
+function isLinearInvScale() {
+  const s = getScale();
+  return !!(s && s.type === 'linear_inv');
 }
 function getLinearMinPass() {
   const s = getScale();
@@ -129,6 +135,18 @@ function computeLinearValue(raw) {
   if (raw < minPass) return null;
   if (maxGrade <= minPass) return 5;
   return Math.min(5, 1 + (raw - minPass) / (maxGrade - minPass) * 4);
+}
+function computeLinearInvValue(raw) {
+  const s = getScale();
+  const bestGrade = (s && s.bestGrade != null) ? s.bestGrade : linearConfig.minPass;
+  const maxPass   = (s && s.maxPass   != null) ? s.maxPass   : linearConfig.maxGrade;
+  if (bestGrade === null || maxPass === null || raw === null || raw === undefined) return undefined;
+  if (raw > maxPass) return null;
+  if (maxPass <= bestGrade) return 5;
+  return Math.min(5, 1 + (maxPass - raw) / (maxPass - bestGrade) * 4);
+}
+function computeCurrentLinearValue(raw) {
+  return isLinearInvScale() ? computeLinearInvValue(raw) : computeLinearValue(raw);
 }
 
 /* ── Populate country dropdown ── */
@@ -175,10 +193,20 @@ function updateScaleInfo() {
   scaleBadge.innerHTML = scale.name + srcHtml;
   scaleBadge.classList.remove('hidden');
 
-  if (scale.type === 'linear') {
+  if (scale.type === 'linear' || scale.type === 'linear_inv') {
+    if (scale.type === 'linear_inv') {
+      linearMinPassLabel.textContent = 'Beste karakter (laveste tall)';
+      linearMaxGradeLabel.textContent = 'Høyeste bestått';
+    } else {
+      linearMinPassLabel.textContent = 'Laveste bestått';
+      linearMaxGradeLabel.textContent = 'Høyeste karakter';
+    }
     document.getElementById('linearWarnText').textContent = scale.warn || '';
     linearWarnWrap.classList.toggle('hidden', !scale.warn);
-    linearConfigWrap.classList.toggle('hidden', scale.minPass !== null);
+    const hasFixed = scale.type === 'linear'
+      ? scale.minPass !== null
+      : scale.bestGrade != null;
+    linearConfigWrap.classList.toggle('hidden', hasFixed);
     refTableWrap.classList.add('hidden');
     return;
   }
@@ -216,7 +244,7 @@ function buildRow(course) {
   const tdGrade = document.createElement('td');
   const scale = getScale();
 
-  if (scale && scale.type === 'linear') {
+  if (scale && (scale.type === 'linear' || scale.type === 'linear_inv')) {
     const li = document.createElement('input');
     li.type = 'text';
     li.inputMode = 'decimal';
@@ -348,7 +376,7 @@ function updateNorskCell(tr, course) {
     if (course.gradeRaw === null || course.gradeRaw === undefined) {
       td.textContent = '–'; td.className = ''; return;
     }
-    const v = computeLinearValue(course.gradeRaw);
+    const v = computeCurrentLinearValue(course.gradeRaw);
     if (v === undefined) { td.textContent = '–'; td.className = ''; return; }
     if (v === null) { td.textContent = 'Stryk'; td.className = 'val-fail'; }
     else { td.textContent = v.toFixed(2).replace('.', ','); td.className = 'val-pass'; }
@@ -389,7 +417,7 @@ function calcStats(subset) {
     if (course.credits === null) return;
     if (linear) {
       if (course.gradeRaw === null) return;
-      const v = computeLinearValue(course.gradeRaw);
+      const v = computeCurrentLinearValue(course.gradeRaw);
       if (v === undefined) return;
       anyEntry = true;
       if (v === null) failCredits += course.credits;
@@ -536,7 +564,7 @@ function saveCalc(sokernummer) {
   const scale   = getScale();
   if (!country || !scale) return;
 
-  const linear   = scale.type === 'linear';
+  const linear   = scale.type === 'linear' || scale.type === 'linear_inv';
   const grades   = linear ? [] : getGrades();
   const scaleIdx = country.scales.length > 1 ? parseInt(scaleSelect.value, 10) || 0 : 0;
   const savedCourses = courses
@@ -547,7 +575,11 @@ function saveCalc(sokernummer) {
       : { name: c.name, gradeLabel: grades[c.gradeIdx]?.label ?? '',
           gradeValue: grades[c.gradeIdx]?.value ?? null, credits: c.credits, core: c.core }
     );
-  const savedLinearConfig = (linear && scale.minPass === null) ? { ...linearConfig } : null;
+  const needsConfig = linear && (
+    (scale.type === 'linear'     && scale.minPass   === null) ||
+    (scale.type === 'linear_inv' && scale.bestGrade == null)
+  );
+  const savedLinearConfig = needsConfig ? { ...linearConfig } : null;
 
   const avg = parseFloat(resNumeric.textContent.replace(',', '.'));
   const arr = getSaves();
@@ -582,7 +614,7 @@ function loadSave(save) {
   if (country && country.scales.length > 1) scaleSelect.value = save.scaleIdx;
 
   const scale  = getScale();
-  const linear = scale && scale.type === 'linear';
+  const linear = scale && (scale.type === 'linear' || scale.type === 'linear_inv');
   if (linear && save.linearConfig) {
     linearConfig = { ...save.linearConfig };
     const mpIn = document.getElementById('linearMinPass');
