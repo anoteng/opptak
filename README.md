@@ -34,9 +34,15 @@ Vektet norsk snitt og tilhørende bokstavkarakter (A–F) vises fortløpende. St
 
 Klikk **«Vis utregning»** under resultatet for en fullstendig oversikt: karakter, norsk verdi, studiepoeng og vektet bidrag per emne, samt formelen som ligger til grunn for snittet.
 
+### ECTS-karakterer og norske emner
+
+Velg **«ECTS (Europeisk standardskala)»** for å beregne norsk karaktersnitt basert på ECTS-karakterer (A–F). Dette er nyttig for studenter med norske eller andre europeiske emner som allerede er vurdert etter ECTS-skalaen.
+
 ### Studenter med utdanning fra flere land
 
 Klikk **«+ Legg til fra et annet land»** for å legge til en ny seksjon med eget land og karakterskala. Alle seksjoner kombineres til ett felles vektet snitt. Antall seksjoner er ubegrenset.
+
+For studenter med et utvekslingsopphold som skal regnes inn i snittet, kan ECTS-seksjonen kombineres med én eller flere utenlandske skalaer. Legg utvekslingsemnene i en egen seksjon med riktig utenlandsk skala, og de norske/europeiske emnene i en ECTS-seksjon.
 
 ### Lineær omregning
 
