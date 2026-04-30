@@ -32,6 +32,8 @@ const resCredits        = document.getElementById('resCredits');
 const resFailCredits    = document.getElementById('resFailCredits');
 const coreResultCard    = document.getElementById('coreResultCard');
 const saveFormCard      = document.getElementById('saveFormCard');
+const calcDetailsWrap   = document.getElementById('calcDetailsWrap');
+const calcDetailsBody   = document.getElementById('calcDetailsBody');
 
 /* ── Numeric-scale helpers ── */
 function parseThreshold(label) {
@@ -635,28 +637,35 @@ function maybeAutoAddRow(ctx) {
 function sectionToItems(ctx) {
   const linear = isLinearScale(ctx);
   const grades = linear ? [] : getGrades(ctx);
+  const country = getCountry(ctx);
+  const scale   = getScale(ctx);
+  const sectionLabel = country && scale ? `${country.name} – ${scale.name}` : null;
   const items = [], coreItems = [];
   ctx.courses.forEach(course => {
     if (course.credits === null) return;
-    let value, isFail;
+    let value, isFail, gradeLabel, norskStr;
     if (linear) {
       if (course.gradeRaw === null) return;
       const v = computeCurrentLinearValue(course.gradeRaw, ctx);
       if (v === undefined) return;
       isFail = (v === null);
       value = isFail ? 0 : v;
+      gradeLabel = String(course.gradeRaw).replace('.', ',');
+      norskStr   = isFail ? 'Stryk' : value.toFixed(2).replace('.', ',');
     } else {
       if (course.gradeIdx === null) return;
       const g = grades[course.gradeIdx];
       if (!g) return;
       isFail = (g.value === null);
       value = isFail ? 0 : g.value;
+      gradeLabel = g.label;
+      norskStr   = isFail ? 'Stryk' : g.value.toString().replace('.', ',');
     }
-    const item = { value, credits: course.credits, isFail, core: course.core };
+    const item = { name: course.name, gradeLabel, norskStr, value, credits: course.credits, isFail, core: course.core };
     items.push(item);
     if (course.core) coreItems.push(item);
   });
-  return { items, coreItems };
+  return { items, coreItems, sectionLabel };
 }
 
 function calcStats(items) {
@@ -695,12 +704,85 @@ function renderStats(stats, els) {
   return true;
 }
 
+function renderCalcDetails(sectionData) {
+  const allItems = sectionData.flatMap(d => d.items);
+  const stats = calcStats(allItems);
+  if (!stats.anyEntry || (stats.passCredits === 0 && stats.failCredits === 0)) {
+    calcDetailsWrap.classList.add('hidden');
+    return;
+  }
+  calcDetailsWrap.classList.remove('hidden');
+
+  const activeSections = sectionData.filter(d => d.items.length > 0);
+  const multiSection   = activeSections.length > 1;
+  const hasCore        = allItems.some(it => it.core);
+
+  const table = document.createElement('table');
+  table.className = 'ref-table';
+  table.style.width = '100%';
+  const thCore = hasCore ? '<th>Fagkrav</th>' : '';
+  table.innerHTML = `<thead><tr>
+    <th>Emne</th><th>Karakter</th><th>Norsk verdi</th>
+    <th>Studiepoeng</th><th>Vektet bidrag</th>${thCore}
+  </tr></thead>`;
+  const tbody = document.createElement('tbody');
+
+  activeSections.forEach(({ items, sectionLabel }) => {
+    if (multiSection && sectionLabel) {
+      const hr = document.createElement('tr');
+      const colSpan = hasCore ? 6 : 5;
+      hr.innerHTML = `<td colspan="${colSpan}" style="padding:0.45rem 0.6rem;background:var(--green-light);color:var(--green);font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;">${sectionLabel}</td>`;
+      tbody.appendChild(hr);
+    }
+    items.forEach(item => {
+      const tr = document.createElement('tr');
+      if (item.isFail) tr.className = 'fail-row';
+      const contrib = item.isFail ? '–' : (item.value * item.credits).toFixed(2).replace('.', ',');
+      const coreCell = hasCore ? `<td style="text-align:center;">${item.core ? '✓' : ''}</td>` : '';
+      tr.innerHTML = `
+        <td>${item.name || '<em style="opacity:.5">–</em>'}</td>
+        <td>${item.gradeLabel}</td>
+        <td>${item.norskStr}</td>
+        <td>${item.credits} sp</td>
+        <td>${contrib}</td>${coreCell}`;
+      tbody.appendChild(tr);
+    });
+  });
+
+  if (stats.passCredits > 0) {
+    const totalRow = document.createElement('tr');
+    totalRow.style.cssText = 'border-top:2px solid var(--border);font-weight:700;';
+    const colSpan = hasCore ? 4 : 3;
+    const failNote = stats.failCredits > 0 ? ` (+ ${stats.failCredits} sp stryk)` : '';
+    totalRow.innerHTML = `
+      <td colspan="${colSpan}">Totalt</td>
+      <td>${stats.passCredits} sp${failNote}</td>
+      <td>${stats.weightedSum.toFixed(2).replace('.', ',')}</td>
+      ${hasCore ? '<td></td>' : ''}`;
+    tbody.appendChild(totalRow);
+  }
+
+  table.appendChild(tbody);
+  calcDetailsBody.innerHTML = '';
+  calcDetailsBody.appendChild(table);
+
+  if (stats.passCredits > 0) {
+    const avg = stats.weightedSum / stats.passCredits;
+    const g   = toNorwegianGrade(avg);
+    const p   = document.createElement('p');
+    p.style.cssText = 'margin-top:0.75rem;font-size:0.83rem;color:var(--text-muted);';
+    p.textContent = `Snitt = ${stats.weightedSum.toFixed(2).replace('.', ',')} ÷ ${stats.passCredits} sp = ${avg.toFixed(2).replace('.', ',')} → ${g.letter} (${g.desc})`;
+    calcDetailsBody.appendChild(p);
+  }
+}
+
 function recalculate() {
-  let allItems = [], coreItems = [];
+  let allItems = [], coreItems = [], sectionData = [];
   sections.forEach(ctx => {
-    const { items, coreItems: ci } = sectionToItems(ctx);
-    allItems = allItems.concat(items);
-    coreItems = coreItems.concat(ci);
+    const result = sectionToItems(ctx);
+    allItems = allItems.concat(result.items);
+    coreItems = coreItems.concat(result.coreItems);
+    sectionData.push(result);
   });
 
   const hasCore = coreItems.length > 0;
@@ -708,7 +790,7 @@ function recalculate() {
     numeric: resNumeric, letter: resLetter, letterDesc: resLetterDesc,
     credits: resCredits, failCredits: resFailCredits
   });
-  if (!visible) { resultSection.classList.add('hidden'); return; }
+  if (!visible) { resultSection.classList.add('hidden'); calcDetailsWrap.classList.add('hidden'); return; }
 
   document.getElementById('resHeading').textContent =
     hasCore ? 'Snitt – alle emner' : 'Beregnet norsk karaktersnitt';
@@ -726,6 +808,8 @@ function recalculate() {
   } else {
     coreResultCard.classList.add('hidden');
   }
+
+  renderCalcDetails(sectionData);
 }
 
 function resetCourses(ctx) {
