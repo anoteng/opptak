@@ -98,7 +98,7 @@ Kilder defineres øverst i `data.js` i `SRC`-objektet:
 export const SRC = {
   UIS:  { name: "UiS",    url: "https://..." },
   OSLO: { name: "OsloMet", url: "https://..." },
-  HH:   { name: "NMBU/Opptakskontoret", url: null }
+  NMBU:   { name: "NMBU/Opptakskontoret", url: null }
 };
 ```
 
