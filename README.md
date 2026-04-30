@@ -1,6 +1,6 @@
-# Karakteromregner – NMBU
+# Karakteromregner
 
-Statisk nettside for omregning av utenlandske karakterer til norsk GPA-skala (A–F / 1–5 poeng), beregnet etter vektet snitt per studiepoeng. Beregnet på saksbehandlere ved opptakskontoret.
+Statisk nettside for omregning av utenlandske karakterer til norsk GPA-skala (A–F / 1–5 poeng), beregnet etter vektet snitt per ECTS-studiepoeng.
 
 ## Innhold
 
@@ -14,36 +14,54 @@ Statisk nettside for omregning av utenlandske karakterer til norsk GPA-skala (A�
 
 ## Bruk
 
-### 1. Velg land og karakterskala
+### Velg land og karakterskala
 
 Velg landet karakterene er utstedt fra. For land med flere skalaer (f.eks. Ghana, Nepal, Sverige) velges riktig skala i et nytt felt. En badge viser hvilken kilde skalaen er hentet fra, med lenke der det er tilgjengelig.
 
 For skalaer med kjente tallgrenser kan du skrive inn tallkarakteren direkte – riktig intervall velges automatisk i nedtrekksmenyen.
 
-### 2. Legg til emner
+### Legg til emner
 
-Fyll inn karakter og studiepoeng per emne. Emnenavnet er valgfritt. Ny linje legges automatisk til når karakter og studiepoeng er registrert.
+Fyll inn karakter og studiepoeng (ECTS) per emne. Emnenavnet er valgfritt. Ny linje legges automatisk til når karakter og studiepoeng er registrert.
 
-**Fagkrav:** Kryss av «Fagkrav» på relevante emner. Da vises to separate snittberegninger: én for alle emner og én for fagkravsemner alene. Dette er i tråd med [Forskrift om studier ved NMBU](https://main-bvxea6i-kdsvgmpf4iwws.eu-5.platformsh.site/sites/default/files/2025-07/Forskrift%20om%20studier%20ved%20NMBU%20med%20utfyllende%20bestemmelser_vedtatt%20US%2009032023_endret%20av%20US%2012062025_2.pdf), som åpner for å beregne snitt på enten hele bachelorgraden eller kun fagkravsemner.
+Tab-rekkefølgen er optimalisert for rask registrering: Tab hopper mellom karakter- og studiepoengfeltet for alle emner, og emnenavnene kommer til slutt i tabsekvensen.
 
-### 3. Resultat
+**Fagkrav:** Kryss av «Fagkrav» på relevante emner for å vise to separate snittberegninger: én for alle emner og én kun for fagkravsemnene.
 
-Vektet norsk snitt og tilhørende bokstavkarakter (A–F) vises fortløpende. Ved stryk-karakterer vises disse separat i studiepoeng.
+### Resultater og utregning
+
+Vektet norsk snitt og tilhørende bokstavkarakter (A–F) vises fortløpende. Stryk-karakterer telles separat i studiepoeng og inngår ikke i snittet.
+
+Klikk **«Vis utregning»** under resultatet for en fullstendig oversikt: karakter, norsk verdi, studiepoeng og vektet bidrag per emne, samt formelen som ligger til grunn for snittet.
+
+### Studenter med utdanning fra flere land
+
+Klikk **«+ Legg til fra et annet land»** for å legge til en ny seksjon med eget land og karakterskala. Alle seksjoner kombineres til ett felles vektet snitt. Antall seksjoner er ubegrenset.
 
 ### Lineær omregning
 
-For land uten egne omregningstabeller (f.eks. Italia, eller ukjente skalaer) brukes lineær interpolasjon:
+For land uten egne omregningstabeller brukes lineær interpolasjon. To varianter er tilgjengelige:
+
+**Stigende skala** (laveste tall er dårligst): velg **«Annen skala (lineær omregning)»** og oppgi laveste bestått og høyeste karakter.
 
 - Laveste bestått → E (1 poeng)
 - Høyeste karakter → A (5 poeng)
 
-Velg **«Annen skala (lineær omregning)»** og oppgi laveste bestått og høyeste karakter. For Italia er disse forhåndsutfylt (18–30, med støtte for 30L).
+For Italia er grensene forhåndsutfylt (18–30, med støtte for «30L» som laud).
+
+**Synkende skala** (laveste tall er best, f.eks. tysk 1–5): velg **«Annen skala, invertert (laveste tall er best)»** og oppgi beste karakter og høyeste bestått.
+
+- Beste karakter (laveste tall) → A (5 poeng)
+- Høyeste bestått → E (1 poeng)
+- Karakterer over høyeste bestått → Stryk
 
 > **Merk:** Lineær omregning er en forenkling og tar ikke hensyn til den faktiske fordelingen av karakterer ved institusjonen.
 
-### Lagring
+### Lagring og deling
 
-Utregninger kan lagres lokalt i nettleseren med søkernummer som referanse. Lagrede oppføringer kan lastes inn igjen eller slettes. Data lagres kun i den aktuelle nettleseren og forsvinner ved tømming av nettleserens lokale data (localStorage).
+Utregninger kan lagres lokalt i nettleseren med et valgfritt referansenummer. Lagrede oppføringer kan lastes inn igjen eller slettes. Data lagres kun i den aktuelle nettleseren og forsvinner ved tømming av nettleserens lokale data (localStorage).
+
+Klikk **«Del»** ved en lagret utregning for å kopiere en delingslenke. Lenken inneholder hele utregningen kodet i URL-fragmentet og kan åpnes av andre uten at noen data sendes til server. Søkernummeret er ikke inkludert i lenken.
 
 ---
 
@@ -137,7 +155,9 @@ Tallformat: bruk komma (`3,5`) eller punktum (`3.5`) – begge fungerer.
 
 ### Lineær omregning (fast skala)
 
-For land der lineær interpolasjon er eneste tilgjengelige metode, bruk `type: "linear"`:
+For land der lineær interpolasjon er eneste tilgjengelige metode, bruk `type: "linear"` (stigende skala) eller `type: "linear_inv"` (synkende skala, laveste tall er best).
+
+**Stigende skala** (`type: "linear"`):
 
 ```js
 {
@@ -155,7 +175,26 @@ For land der lineær interpolasjon er eneste tilgjengelige metode, bruk `type: "
 }
 ```
 
-Sett `minPass: null` og `maxGrade: null` for å la brukeren oppgi grensene selv (som for «Annen skala»).
+Sett `minPass: null` og `maxGrade: null` for å la brukeren oppgi grensene selv.
+
+**Synkende skala** (`type: "linear_inv"`):
+
+```js
+{
+  id: "example_inv",
+  name: "Eksempelland",
+  scales: [{
+    name: "Invertert skala (1–4)",
+    type: "linear_inv",
+    bestGrade: 1,     // beste karakter (laveste tall) → A (5 poeng)
+    maxPass: 4,       // høyeste bestått → E (1 poeng)
+    warn: "Omregningen er basert på lineær interpolasjon ...",
+    src: null
+  }]
+}
+```
+
+Sett `bestGrade: null` og `maxPass: null` for å la brukeren oppgi grensene selv.
 
 ---
 
@@ -170,4 +209,4 @@ Sett `minPass: null` og `maxGrade: null` for å la brukeren oppgi grensene selv 
 | ≥ 0,5 | E | Tilstrekkelig |
 | – | F | Stryk |
 
-Omregningsverdier i tabellene er basert på [UiS](https://www.uis.no/nb/studier/omregning-av-karaktersystem), [OsloMet](https://www.oslomet.no/studier/soknad-og-opptak/poengberegning-rangeringsregler/omregning-av-karakterer) og NMBU/Opptakskontoret. Der kildene er i konflikt brukes UiS-verdien. Der OsloMet har større granularitet enn UiS uten konflikt, brukes OsloMet.
+Omregningsverdier i tabellene er basert på [UiS](https://www.uis.no/nb/studier/omregning-av-karaktersystem) og [OsloMet](https://www.oslomet.no/studier/soknad-og-opptak/poengberegning-rangeringsregler/omregning-av-karakterer). Der kildene er i konflikt brukes UiS-verdien. Der OsloMet har større granularitet enn UiS uten konflikt, brukes OsloMet.
