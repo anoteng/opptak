@@ -76,7 +76,12 @@ function findGradeIndexByNumeric(grades, val) {
     const iv = parseInterval(grades[i].label);
     if (iv && val >= iv.lo && val <= iv.hi) return i;
   }
-  // Second pass: threshold-based
+  // "Over X" pattern (inverted scales: values above threshold are fail)
+  for (let i = 0; i < grades.length; i++) {
+    const m = grades[i].label.replace(/,/g, '.').match(/^[Oo]ver\s*([\d.]+)/);
+    if (m && val > parseFloat(m[1])) return i;
+  }
+  // Second pass: threshold-based (ascending scales)
   for (let i = 0; i < grades.length; i++) {
     const t = parseThreshold(grades[i].label);
     if (t === null) continue;

@@ -330,6 +330,18 @@ export const COUNTRIES = [
       ]}
     ]
   },
+  // ── Norge (gammel skala) ──────────────────────────────────────
+  {
+    id: "norway_old", name: "Norge (gammel skala)",
+    scales: [{ name: "Gammel norsk tallskala (1,0–4,0)", src: SRC.UIS, grades: [
+      { label: "1,0–2,2",          value: 5 },
+      { label: "2,3–2,5",          value: 4 },
+      { label: "2,6–2,7",          value: 3 },
+      { label: "2,8–3,0",          value: 2 },
+      { label: "3,1–4,0",          value: 1 },
+      { label: "Over 4,0 – Stryk", value: null }
+    ]}]
+  },
   // ── Nigeria ───────────────────────────────────────────────────
   {
     id: "nigeria", name: "Nigeria",
