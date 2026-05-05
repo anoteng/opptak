@@ -46,7 +46,6 @@ export const COUNTRIES = [
     id: "austria", name: "Østerrike",
     scales: [{
       name: "Østerriksk tallskala (1–4, lineær omregning)",
-      src: SRC.HH,
       grades: [
         { label: "Sehr gut (1) / Excellent",          value: 5    },
         { label: "Gut (2) / Good",                    value: 3.67 },
