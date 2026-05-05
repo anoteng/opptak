@@ -41,6 +41,21 @@ export const COUNTRIES = [
       { label: "Under 10 – Stryk",                                        value: null }
     ]}]
   },
+  // ── Østerrike ─────────────────────────────────────────────────
+  {
+    id: "austria", name: "Østerrike",
+    scales: [{
+      name: "Østerriksk tallskala (1–4, lineær omregning)",
+      src: SRC.HH,
+      grades: [
+        { label: "Sehr gut (1) / Excellent",          value: 5    },
+        { label: "Gut (2) / Good",                    value: 3.67 },
+        { label: "Befriedigend (3) / Satisfactory",   value: 2.33 },
+        { label: "Genügend (4) / Sufficient",         value: 1    },
+        { label: "Nicht genügend (5) / Fail – Stryk", value: null }
+      ]
+    }]
+  },
   // ── Bosnia-Hercegovina ────────────────────────────────────────
   {
     id: "bosnia", name: "Bosnia-Hercegovina",
