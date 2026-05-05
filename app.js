@@ -513,7 +513,7 @@ function buildRow(course, ctx) {
 
     if (isNumericScale(grades)) {
       const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:0.25rem;';
+      wrapper.style.cssText = 'display:flex;flex-direction:column;gap:0.25rem;min-width:220px;';
       const numInput = document.createElement('input');
       numInput.type = 'text';
       numInput.inputMode = 'decimal';
