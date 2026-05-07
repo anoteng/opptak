@@ -281,6 +281,14 @@ export const COUNTRIES = [
       src: null
     }]
   },
+  // ── Kina ──────────────────────────────────────────────────────
+  {
+    id: "china", name: "Kina",
+    scales: [{ name: "Kinesisk prosentskala (0–100)", type: "linear", minPass: 60, maxGrade: 100, laudGrade: null,
+      warn: "Omregningen er basert på lineær interpolasjon. Laveste bestått (60) tilsvarer E (1 poeng), høyeste karakter (100) tilsvarer A (5 poeng). Det finnes ingen offentliggjort norsk omregningstabell for denne skalaen. Karakteren 合格/通过 (Qualified/Pass) er ikke tallbasert og kan ikke omregnes.",
+      src: null
+    }]
+  },
   // ── Litauen ───────────────────────────────────────────────────
   {
     id: "lithuania", name: "Litauen",
