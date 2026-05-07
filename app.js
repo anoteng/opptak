@@ -265,8 +265,7 @@ function createSection() {
   courseTable.innerHTML = `<thead><tr>
     <th>Emne (valgfritt)</th>
     <th>Karakter</th>
-    <th>Studiepoeng (ECTS)</th>
-    <th>Norsk verdi</th>
+    <th>SP / Norsk verdi</th>
     <th title="Merk fagkrav for separat snittberegning">Fagkrav</th>
     <th></th>
   </tr></thead>`;
@@ -544,7 +543,10 @@ function buildRow(course, ctx) {
   }
 
   // Credits
-  const tdCredits = document.createElement('td');
+  // Combined SP + Norsk verdi cell
+  const tdSpNv = document.createElement('td');
+  const spNvCell = document.createElement('div');
+  spNvCell.className = 'sp-nv-cell';
   const credInput = document.createElement('input');
   credInput.type = 'number';
   credInput.min = '0.5';
@@ -558,12 +560,12 @@ function buildRow(course, ctx) {
     recalculate();
     maybeAutoAddRow(ctx);
   });
-  tdCredits.appendChild(credInput);
-
-  // Norsk value
-  const tdNorsk = document.createElement('td');
-  tdNorsk.id = `nv-${course.id}`;
-  tdNorsk.textContent = '–';
+  spNvCell.appendChild(credInput);
+  const nvDiv = document.createElement('div');
+  nvDiv.id = `nv-${course.id}`;
+  nvDiv.textContent = '–';
+  spNvCell.appendChild(nvDiv);
+  tdSpNv.appendChild(spNvCell);
 
   // Fagkrav
   const tdCore = document.createElement('td');
@@ -597,12 +599,12 @@ function buildRow(course, ctx) {
   });
   tdDel.appendChild(delBtn);
 
-  tr.append(tdName, tdGrade, tdCredits, tdNorsk, tdCore, tdDel);
+  tr.append(tdName, tdGrade, tdSpNv, tdCore, tdDel);
   return tr;
 }
 
 function updateNorskCell(tr, course, ctx) {
-  const td = tr.querySelector(`#nv-${course.id}`) || tr.cells[3];
+  const td = tr.querySelector(`#nv-${course.id}`);
   if (!td) return;
   if (isLinearScale(ctx)) {
     if (course.gradeRaw === null || course.gradeRaw === undefined) {
@@ -988,7 +990,9 @@ function renderSaves() {
     dateTd.textContent = dts;
 
     const actionTd = document.createElement('td');
-    actionTd.className = 'saved-actions';
+    const actionDiv = document.createElement('div');
+    actionDiv.className = 'saved-actions';
+    actionTd.appendChild(actionDiv);
 
     const loadBtn = document.createElement('button');
     loadBtn.className = 'btn btn-primary';
@@ -1010,7 +1014,7 @@ function renderSaves() {
     shareBtn.textContent = 'Del';
     shareBtn.addEventListener('click', () => copyShareUrl(s, shareBtn));
 
-    actionTd.append(loadBtn, shareBtn, delBtn);
+    actionDiv.append(loadBtn, shareBtn, delBtn);
     tr.append(nameTd, ctryTd, avgTd, letterTd, dateTd, actionTd);
     tbody.appendChild(tr);
   });
