@@ -136,6 +136,7 @@
         &nbsp;·&nbsp;
         <a href="#" id="openDisclaimerBtn">Ansvarsfraskrivelse</a>
     </p>
+    <p><a href="#" id="openPrivacyBtn">Personvern</a></p>
 </footer>
 
 <!-- Disclaimer modal -->
@@ -146,6 +147,22 @@
         <p>Der det finnes offentliggjorte omregningsskalaer er disse benyttet og kildene er angitt. For land og skalaer der slike kilder ikke finnes, benyttes <strong>lineær interpolasjon</strong> – en matematisk tilnærming som ikke er basert på statistikk om faktisk bruk av skalaene. Dette er merket i verktøyet der det er relevant.</p>
         <p>Utvikleren fraskriver seg ethvert ansvar for beslutninger som tas på bakgrunn av beregninger gjort i dette verktøyet. Kontakt alltid det aktuelle opptakskontoret for å få bekreftet hvordan karakterene dine vil bli behandlet.</p>
         <button class="btn btn-primary" id="closeDisclaimerBtn">Jeg forstår</button>
+    </div>
+</div>
+
+<!-- Privacy modal -->
+<div id="privacyOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+    <div class="modal-box">
+        <h2 id="privacyTitle">Personvern</h2>
+        <p><strong>Hva lagres på serveren?</strong><br>
+        Kun et tidsstempel (dato og klokkeslett i UTC) registreres når en beregning utføres. Ingen IP-adresser, ingen personopplysninger og ingen informasjon om hva som ble beregnet lagres.</p>
+        <p><strong>Hva lagres i nettleseren din?</strong><br>
+        Utregninger du velger å lagre (via «Lagre utregning») lagres utelukkende i nettleserens <em>localStorage</em> på din egen enhet. Disse dataene sendes aldri til serveren og er ikke tilgjengelige fra andre enheter.</p>
+        <p><strong>Informasjonskapsler (cookies)</strong><br>
+        Dette verktøyet bruker ingen informasjonskapsler.</p>
+        <p><strong>Tredjeparts tjenester</strong><br>
+        Det benyttes ingen tredjeparts sporingsverktøy, annonsenettverk eller analyseplattformer.</p>
+        <button class="btn btn-primary" id="closePrivacyBtn">Lukk</button>
     </div>
 </div>
 
