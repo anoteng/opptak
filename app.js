@@ -1,4 +1,5 @@
 import { COUNTRIES } from './data.js';
+import { CONFIG } from './config.js';
 
 /* ── Norwegian grade scale ── */
 const NO_GRADES = [
@@ -1145,7 +1146,26 @@ function closeDisclaimer() {
 closeDisclaimerBtn.addEventListener('click', closeDisclaimer);
 disclaimerOverlay.addEventListener('click', e => { if (e.target === disclaimerOverlay) closeDisclaimer(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !disclaimerOverlay.classList.contains('hidden')) closeDisclaimer(); });
-openDisclaimerBtn.addEventListener('click', e => { e.preventDefault(); openDisclaimer(); });
+if (openDisclaimerBtn) openDisclaimerBtn.addEventListener('click', e => { e.preventDefault(); openDisclaimer(); });
+
+/* ── Apply config ── */
+function applyConfig() {
+  const { branding, disclaimer } = CONFIG;
+
+  document.title = branding.pageTitle;
+  document.getElementById('brandingHeading').textContent    = branding.heading;
+  document.getElementById('brandingSubheading').textContent = branding.subheading;
+
+  const instEl = document.getElementById('brandingInstitution');
+  if (branding.institutionName) {
+    instEl.textContent = branding.institutionName;
+    instEl.hidden = false;
+  }
+
+  if (!disclaimer.enabled) {
+    document.getElementById('disclaimerFooterLink').hidden = true;
+  }
+}
 
 /* ── Calc count footer ── */
 const apiBase = window.location.pathname.startsWith('/opptak') ? '/opptak/api' : '/api';
@@ -1160,7 +1180,8 @@ fetch(apiBase + '/count')
   .catch(() => {});
 
 /* ── Init ── */
+applyConfig();
 createSection();
 renderSaves();
 loadShareFromUrl();
-if (!localStorage.getItem(DISCLAIMER_KEY)) openDisclaimer();
+if (CONFIG.disclaimer.enabled && CONFIG.disclaimer.autoShow && !localStorage.getItem(DISCLAIMER_KEY)) openDisclaimer();
