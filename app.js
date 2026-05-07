@@ -989,7 +989,9 @@ function renderSaves() {
     dateTd.textContent = dts;
 
     const actionTd = document.createElement('td');
-    actionTd.className = 'saved-actions';
+    const actionDiv = document.createElement('div');
+    actionDiv.className = 'saved-actions';
+    actionTd.appendChild(actionDiv);
 
     const loadBtn = document.createElement('button');
     loadBtn.className = 'btn btn-primary';
@@ -1011,7 +1013,7 @@ function renderSaves() {
     shareBtn.textContent = 'Del';
     shareBtn.addEventListener('click', () => copyShareUrl(s, shareBtn));
 
-    actionTd.append(loadBtn, shareBtn, delBtn);
+    actionDiv.append(loadBtn, shareBtn, delBtn);
     tr.append(nameTd, ctryTd, avgTd, letterTd, dateTd, actionTd);
     tbody.appendChild(tr);
   });
