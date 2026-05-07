@@ -158,6 +158,7 @@ input:focus {
 
 /* ── Course table ── */
 .table-wrap { overflow-x: auto; }
+.table-wrap table { min-width: max-content; }
 table {
     width: 100%;
     border-collapse: collapse;
@@ -174,14 +175,19 @@ thead th {
     letter-spacing: 0.05em;
     white-space: nowrap;
 }
-thead th:last-child { width: 44px; }
+thead th:last-child { width: 44px; position: sticky; right: 0; background: var(--green-light); z-index: 1; }
 tbody tr { border-bottom: 1px solid #F0F3F1; }
 tbody tr:last-child { border-bottom: none; }
 tbody td { padding: 0.45rem 0.75rem; vertical-align: middle; }
+tbody td:last-child { position: sticky; right: 0; background: var(--white); }
 
 td select { min-width: 220px; }
 td input[type="number"] { width: 90px; }
 td input[type="text"]   { min-width: 130px; }
+
+.sp-nv-cell { display: flex; flex-direction: column; gap: 0.2rem; }
+.sp-nv-cell input[type="number"] { width: 80px; }
+.sp-nv-cell > div { font-size: 0.88rem; }
 .num-grade-input { min-width: 0; width: 100%; font-size: 0.82rem; }
 
 .val-pass { font-weight: 600; color: var(--green); }

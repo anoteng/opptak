@@ -265,8 +265,7 @@ function createSection() {
   courseTable.innerHTML = `<thead><tr>
     <th>Emne (valgfritt)</th>
     <th>Karakter</th>
-    <th>Studiepoeng (ECTS)</th>
-    <th>Norsk verdi</th>
+    <th>SP / Norsk verdi</th>
     <th title="Merk fagkrav for separat snittberegning">Fagkrav</th>
     <th></th>
   </tr></thead>`;
@@ -543,8 +542,10 @@ function buildRow(course, ctx) {
     }
   }
 
-  // Credits
-  const tdCredits = document.createElement('td');
+  // Combined SP + Norsk verdi cell
+  const tdSpNv = document.createElement('td');
+  const spNvCell = document.createElement('div');
+  spNvCell.className = 'sp-nv-cell';
   const credInput = document.createElement('input');
   credInput.type = 'number';
   credInput.min = '0.5';
@@ -558,12 +559,12 @@ function buildRow(course, ctx) {
     recalculate();
     maybeAutoAddRow(ctx);
   });
-  tdCredits.appendChild(credInput);
-
-  // Norsk value
-  const tdNorsk = document.createElement('td');
-  tdNorsk.id = `nv-${course.id}`;
-  tdNorsk.textContent = '–';
+  spNvCell.appendChild(credInput);
+  const nvDiv = document.createElement('div');
+  nvDiv.id = `nv-${course.id}`;
+  nvDiv.textContent = '–';
+  spNvCell.appendChild(nvDiv);
+  tdSpNv.appendChild(spNvCell);
 
   // Fagkrav
   const tdCore = document.createElement('td');
@@ -597,12 +598,12 @@ function buildRow(course, ctx) {
   });
   tdDel.appendChild(delBtn);
 
-  tr.append(tdName, tdGrade, tdCredits, tdNorsk, tdCore, tdDel);
+  tr.append(tdName, tdGrade, tdSpNv, tdCore, tdDel);
   return tr;
 }
 
 function updateNorskCell(tr, course, ctx) {
-  const td = tr.querySelector(`#nv-${course.id}`) || tr.cells[3];
+  const td = tr.querySelector(`#nv-${course.id}`);
   if (!td) return;
   if (isLinearScale(ctx)) {
     if (course.gradeRaw === null || course.gradeRaw === undefined) {
@@ -1104,25 +1105,7 @@ function loadShareFromUrl() {
   }
 }
 
-/* ── Disclaimer modal ── */
-const disclaimerOverlay  = document.getElementById('disclaimerOverlay');
-const closeDisclaimerBtn = document.getElementById('closeDisclaimerBtn');
-const openDisclaimerBtn  = document.getElementById('openDisclaimerBtn');
-const DISCLAIMER_KEY     = 'disclaimer_seen_v1';
-
-function openDisclaimer()  { disclaimerOverlay.classList.remove('hidden'); }
-function closeDisclaimer() {
-  disclaimerOverlay.classList.add('hidden');
-  localStorage.setItem(DISCLAIMER_KEY, '1');
-}
-
-closeDisclaimerBtn.addEventListener('click', closeDisclaimer);
-disclaimerOverlay.addEventListener('click', e => { if (e.target === disclaimerOverlay) closeDisclaimer(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !disclaimerOverlay.classList.contains('hidden')) closeDisclaimer(); });
-openDisclaimerBtn.addEventListener('click', e => { e.preventDefault(); openDisclaimer(); });
-
 /* ── Init ── */
 createSection();
 renderSaves();
 loadShareFromUrl();
-if (!localStorage.getItem(DISCLAIMER_KEY)) openDisclaimer();
