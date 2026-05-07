@@ -494,22 +494,39 @@ export const COUNTRIES = [
   // ── USA ───────────────────────────────────────────────────────
   {
     id: "usa", name: "USA",
-    scales: [{ name: "Amerikansk GPA-skala (4,0)", src: SRC.HH, grades: [
-      { label: "4,0",                  value: 5    },
-      { label: ">= 3,9",               value: 4.75 },
-      { label: ">= 3,85",              value: 4.5  },
-      { label: ">= 3,8",               value: 4.25 },
-      { label: ">= 3,7",               value: 4    },
-      { label: ">= 3,5",               value: 3.75 },
-      { label: ">= 3,3",               value: 3.5  },
-      { label: ">= 3,15",              value: 3.25 },
-      { label: ">= 3,0",               value: 3    },
-      { label: ">= 2,7",               value: 2.5  },
-      { label: ">= 2,0",               value: 2    },
-      { label: ">= 1,7",               value: 1.5  },
-      { label: ">= 0,7",               value: 1    },
-      { label: "Under 0,7 – Stryk",    value: null }
-    ]}]
+    scales: [
+      { name: "Amerikansk GPA-skala (4,0)", src: SRC.HH, grades: [
+        { label: "4,0",                  value: 5    },
+        { label: ">= 3,9",               value: 4.75 },
+        { label: ">= 3,85",              value: 4.5  },
+        { label: ">= 3,8",               value: 4.25 },
+        { label: ">= 3,7",               value: 4    },
+        { label: ">= 3,5",               value: 3.75 },
+        { label: ">= 3,3",               value: 3.5  },
+        { label: ">= 3,15",              value: 3.25 },
+        { label: ">= 3,0",               value: 3    },
+        { label: ">= 2,7",               value: 2.5  },
+        { label: ">= 2,0",               value: 2    },
+        { label: ">= 1,7",               value: 1.5  },
+        { label: ">= 0,7",               value: 1    },
+        { label: "Under 0,7 – Stryk",    value: null }
+      ]},
+      { name: "Amerikansk bokstavskala (A–F)", src: SRC.HH, grades: [
+        { label: "A+", value: 5    },
+        { label: "A",  value: 5    },
+        { label: "A-", value: 4    },
+        { label: "B+", value: 3.5  },
+        { label: "B",  value: 3    },
+        { label: "B-", value: 2.5  },
+        { label: "C+", value: 2    },
+        { label: "C",  value: 2    },
+        { label: "C-", value: 1.5  },
+        { label: "D+", value: 1    },
+        { label: "D",  value: 1    },
+        { label: "D-", value: 1    },
+        { label: "F – Stryk", value: null }
+      ]}
+    ]
   },
   // ── Annen skala (lineær) ──────────────────────────────────────
   {
