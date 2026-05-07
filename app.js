@@ -1147,6 +1147,18 @@ disclaimerOverlay.addEventListener('click', e => { if (e.target === disclaimerOv
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !disclaimerOverlay.classList.contains('hidden')) closeDisclaimer(); });
 openDisclaimerBtn.addEventListener('click', e => { e.preventDefault(); openDisclaimer(); });
 
+/* ── Calc count footer ── */
+const apiBase = window.location.pathname.startsWith('/opptak') ? '/opptak/api' : '/api';
+fetch(apiBase + '/count')
+  .then(r => r.json())
+  .then(({ count }) => {
+    if (count > 0) {
+      document.getElementById('calcCount').textContent = count.toLocaleString('no-NO');
+      document.getElementById('calcCountLine').classList.remove('hidden');
+    }
+  })
+  .catch(() => {});
+
 /* ── Init ── */
 createSection();
 renderSaves();
