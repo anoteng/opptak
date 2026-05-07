@@ -53,20 +53,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(json.dumps({'ok': True, 'total': total}).encode())
 
     def do_GET(self):
-        if self.path != '/api/stats':
+        if self.path == '/api/count':
+            with get_db() as conn:
+                total = conn.execute('SELECT COUNT(*) FROM calcs').fetchone()[0]
+            payload = {'count': total}
+        elif self.path == '/api/stats':
+            with get_db() as conn:
+                total = conn.execute('SELECT COUNT(*) FROM calcs').fetchone()[0]
+                rows = conn.execute(
+                    "SELECT substr(ts,1,10) AS date, COUNT(*) AS cnt "
+                    "FROM calcs GROUP BY date ORDER BY date DESC LIMIT 90"
+                ).fetchall()
+            payload = {
+                'total': total,
+                'by_date': [{'date': r[0], 'count': r[1]} for r in rows]
+            }
+        else:
             self.send_response(404)
             self.end_headers()
             return
-        with get_db() as conn:
-            total = conn.execute('SELECT COUNT(*) FROM calcs').fetchone()[0]
-            rows = conn.execute(
-                "SELECT substr(ts,1,10) AS date, COUNT(*) AS cnt "
-                "FROM calcs GROUP BY date ORDER BY date DESC LIMIT 90"
-            ).fetchall()
-        payload = {
-            'total': total,
-            'by_date': [{'date': r[0], 'count': r[1]} for r in rows]
-        }
         self.send_response(200)
         self._cors_headers()
         self.send_header('Content-Type', 'application/json')
