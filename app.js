@@ -1110,12 +1110,15 @@ function loadShareFromUrl() {
   }
 }
 
+/* ── API base path ── */
+const apiBase = window.location.pathname.startsWith('/opptak') ? '/opptak/api' : '/api';
+
 /* ── Usage logging ── */
 let calcLogged = false;
 function logCalc() {
   if (calcLogged) return;
   calcLogged = true;
-  navigator.sendBeacon('/api/calc-log');
+  navigator.sendBeacon(apiBase + '/calc-log');
 }
 
 /* ── Privacy modal ── */
@@ -1156,10 +1159,17 @@ function applyConfig() {
   document.getElementById('brandingHeading').textContent    = branding.heading;
   document.getElementById('brandingSubheading').textContent = branding.subheading;
 
-  const instEl = document.getElementById('brandingInstitution');
   if (branding.institutionName) {
+    const instEl = document.getElementById('brandingInstitution');
     instEl.textContent = branding.institutionName;
     instEl.hidden = false;
+
+    const sourcesEl = document.getElementById('sourcesLine');
+    sourcesEl.innerHTML = `${branding.institutionName} &nbsp;·&nbsp; ${sourcesEl.textContent}`;
+  }
+
+  if (!branding.showDonationLink) {
+    document.getElementById('donationLine').hidden = true;
   }
 
   if (!disclaimer.enabled) {
@@ -1168,7 +1178,6 @@ function applyConfig() {
 }
 
 /* ── Calc count footer ── */
-const apiBase = window.location.pathname.startsWith('/opptak') ? '/opptak/api' : '/api';
 fetch(apiBase + '/count')
   .then(r => r.json())
   .then(({ count }) => {
