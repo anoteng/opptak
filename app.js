@@ -1113,7 +1113,7 @@ let calcLogged = false;
 function logCalc() {
   if (calcLogged) return;
   calcLogged = true;
-  navigator.sendBeacon('/api/calc-log');
+  navigator.sendBeacon('/opptak/api/calc-log');
 }
 
 /* ── Privacy modal ── */
