@@ -81,13 +81,15 @@ function findGradeIndexByNumeric(grades, val) {
     const m = grades[i].label.replace(/,/g, '.').match(/^[Oo]ver\s*([\d.]+)/);
     if (m && val > parseFloat(m[1])) return i;
   }
-  // Second pass: threshold-based (ascending scales)
+  // Second pass: find grade with highest threshold still <= val
+  let bestIdx = -1, bestThresh = -Infinity;
   for (let i = 0; i < grades.length; i++) {
     const t = parseThreshold(grades[i].label);
     if (t === null) continue;
-    if (t === -Infinity || val >= t) return i;
+    if (t === -Infinity) { if (bestIdx === -1) bestIdx = i; continue; } // catch-all fallback
+    if (val >= t && t > bestThresh) { bestThresh = t; bestIdx = i; }
   }
-  return -1;
+  return bestIdx;
 }
 
 /* ── Per-section scale helpers (all take ctx) ── */
