@@ -1104,7 +1104,25 @@ function loadShareFromUrl() {
   }
 }
 
+/* ── Disclaimer modal ── */
+const disclaimerOverlay  = document.getElementById('disclaimerOverlay');
+const closeDisclaimerBtn = document.getElementById('closeDisclaimerBtn');
+const openDisclaimerBtn  = document.getElementById('openDisclaimerBtn');
+const DISCLAIMER_KEY     = 'disclaimer_seen_v1';
+
+function openDisclaimer()  { disclaimerOverlay.classList.remove('hidden'); }
+function closeDisclaimer() {
+  disclaimerOverlay.classList.add('hidden');
+  localStorage.setItem(DISCLAIMER_KEY, '1');
+}
+
+closeDisclaimerBtn.addEventListener('click', closeDisclaimer);
+disclaimerOverlay.addEventListener('click', e => { if (e.target === disclaimerOverlay) closeDisclaimer(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !disclaimerOverlay.classList.contains('hidden')) closeDisclaimer(); });
+openDisclaimerBtn.addEventListener('click', e => { e.preventDefault(); openDisclaimer(); });
+
 /* ── Init ── */
 createSection();
 renderSaves();
 loadShareFromUrl();
+if (!localStorage.getItem(DISCLAIMER_KEY)) openDisclaimer();
