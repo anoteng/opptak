@@ -803,6 +803,7 @@ function recalculate() {
   document.getElementById('resHeading').textContent =
     hasCore ? 'Snitt – alle emner' : 'Beregnet norsk karaktersnitt';
   resultSection.classList.remove('hidden');
+  logCalc();
 
   if (hasCore) {
     renderStats(calcStats(coreItems), {
@@ -1106,6 +1107,27 @@ function loadShareFromUrl() {
     /* ugyldig lenke – ignorer */
   }
 }
+
+/* ── Usage logging ── */
+let calcLogged = false;
+function logCalc() {
+  if (calcLogged) return;
+  calcLogged = true;
+  navigator.sendBeacon('/api/calc-log');
+}
+
+/* ── Privacy modal ── */
+const privacyOverlay  = document.getElementById('privacyOverlay');
+const closePrivacyBtn = document.getElementById('closePrivacyBtn');
+const openPrivacyBtn  = document.getElementById('openPrivacyBtn');
+
+function openPrivacy()  { privacyOverlay.classList.remove('hidden'); }
+function closePrivacy() { privacyOverlay.classList.add('hidden'); }
+
+closePrivacyBtn.addEventListener('click', closePrivacy);
+privacyOverlay.addEventListener('click', e => { if (e.target === privacyOverlay) closePrivacy(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !privacyOverlay.classList.contains('hidden')) closePrivacy(); });
+openPrivacyBtn.addEventListener('click', e => { e.preventDefault(); openPrivacy(); });
 
 /* ── Init ── */
 createSection();

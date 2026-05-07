@@ -134,7 +134,24 @@
         &nbsp;·&nbsp;
         Lisensiert under <a href="https://www.gnu.org/licenses/gpl-3.0.txt" target="_blank" rel="noopener">GNU GPL v3+</a>
     </p>
+    <p><a href="#" id="openPrivacyBtn">Personvern</a></p>
 </footer>
+
+<!-- Privacy modal -->
+<div id="privacyOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+    <div class="modal-box">
+        <h2 id="privacyTitle">Personvern</h2>
+        <p><strong>Hva lagres på serveren?</strong><br>
+        Kun et tidsstempel (dato og klokkeslett i UTC) registreres når en beregning utføres. Ingen IP-adresser, ingen personopplysninger og ingen informasjon om hva som ble beregnet lagres.</p>
+        <p><strong>Hva lagres i nettleseren din?</strong><br>
+        Utregninger du velger å lagre (via «Lagre utregning») lagres utelukkende i nettleserens <em>localStorage</em> på din egen enhet. Disse dataene sendes aldri til serveren og er ikke tilgjengelige fra andre enheter.</p>
+        <p><strong>Informasjonskapsler (cookies)</strong><br>
+        Dette verktøyet bruker ingen informasjonskapsler.</p>
+        <p><strong>Tredjeparts tjenester</strong><br>
+        Det benyttes ingen tredjeparts sporingsverktøy, annonsenettverk eller analyseplattformer.</p>
+        <button class="btn btn-primary" id="closePrivacyBtn">Lukk</button>
+    </div>
+</div>
 
 <script type="module" src="app.js"></script>
 
