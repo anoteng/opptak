@@ -1051,6 +1051,7 @@ document.getElementById('clearAllBtn').addEventListener('click', () => {
   createSection();
   saveFormCard.classList.add('hidden');
   resultSection.classList.add('hidden');
+  calcLogged = false;
 });
 
 /* ── Add section ── */
