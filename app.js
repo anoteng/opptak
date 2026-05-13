@@ -1142,18 +1142,6 @@ fetch(apiBase + '/count')
   })
   .catch(() => {});
 
-/* ── Calc count footer ── */
-const apiBase = window.location.pathname.startsWith('/opptak') ? '/opptak/api' : '/api';
-fetch(apiBase + '/count')
-  .then(r => r.json())
-  .then(({ count }) => {
-    if (count > 0) {
-      document.getElementById('calcCount').textContent = count.toLocaleString('no-NO');
-      document.getElementById('calcCountLine').classList.remove('hidden');
-    }
-  })
-  .catch(() => {});
-
 /* ── Init ── */
 createSection();
 renderSaves();
