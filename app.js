@@ -1050,6 +1050,7 @@ document.getElementById('clearAllBtn').addEventListener('click', () => {
   createSection();
   saveFormCard.classList.add('hidden');
   resultSection.classList.add('hidden');
+  calcLogged = false;
 });
 
 /* ── Add section ── */
@@ -1128,6 +1129,18 @@ closePrivacyBtn.addEventListener('click', closePrivacy);
 privacyOverlay.addEventListener('click', e => { if (e.target === privacyOverlay) closePrivacy(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !privacyOverlay.classList.contains('hidden')) closePrivacy(); });
 openPrivacyBtn.addEventListener('click', e => { e.preventDefault(); openPrivacy(); });
+
+/* ── Calc count footer ── */
+const apiBase = window.location.pathname.startsWith('/opptak') ? '/opptak/api' : '/api';
+fetch(apiBase + '/count')
+  .then(r => r.json())
+  .then(({ count }) => {
+    if (count > 0) {
+      document.getElementById('calcCount').textContent = count.toLocaleString('no-NO');
+      document.getElementById('calcCountLine').classList.remove('hidden');
+    }
+  })
+  .catch(() => {});
 
 /* ── Calc count footer ── */
 const apiBase = window.location.pathname.startsWith('/opptak') ? '/opptak/api' : '/api';
