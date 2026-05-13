@@ -181,7 +181,7 @@ tbody tr:last-child { border-bottom: none; }
 tbody td { padding: 0.45rem 0.75rem; vertical-align: middle; }
 tbody td:last-child { position: sticky; right: 0; background: var(--white); }
 
-td select { min-width: 220px; }
+td select { min-width: 220px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
 td input[type="number"] { width: 90px; }
 td input[type="text"]   { min-width: 130px; }
 
