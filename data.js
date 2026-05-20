@@ -81,15 +81,30 @@ export const COUNTRIES = [
   // ── Danmark ───────────────────────────────────────────────────
   {
     id: "denmark", name: "Danmark",
-    scales: [{ name: "Dansk 7-trinnskala", src: SRC.UIS, grades: [
-      { label: "12",                value: 5 },
-      { label: "10",                value: 4 },
-      { label: "7",                 value: 3 },
-      { label: "4",                 value: 2 },
-      { label: "02",                value: 1 },
-      { label: "00 – Stryk",        value: null },
-      { label: "-3 – Stryk",        value: null }
-    ]}]
+    scales: [
+      { name: "Dansk 7-trinnskala", src: SRC.UIS, grades: [
+        { label: "12",                value: 5 },
+        { label: "10",                value: 4 },
+        { label: "7",                 value: 3 },
+        { label: "4",                 value: 2 },
+        { label: "02",                value: 1 },
+        { label: "00 – Stryk",        value: null },
+        { label: "-3 – Stryk",        value: null }
+      ]},
+      { name: "Dansk 13-trinnskala", src: SRC.UIS, grades: [
+        { label: "13",                value: 5    },
+        { label: "11",                value: 5    },
+        { label: "10",                value: 4    },
+        { label: "9",                 value: 3    },
+        { label: "8",                 value: 3    },
+        { label: "7",                 value: 2    },
+        { label: "6",                 value: 1    },
+        { label: "5 – Stryk",         value: null },
+        { label: "03 – Stryk",        value: null },
+        { label: "00 – Stryk",        value: null },
+        { label: "-3 – Stryk",        value: null }
+      ]}
+    ]
   },
   // ── England/UK ────────────────────────────────────────────────
   // Kilde NMBU/Opptakskontoret
