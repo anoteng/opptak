@@ -542,6 +542,7 @@ function buildRow(course, ctx) {
     }
   }
 
+  // Credits
   // Combined SP + Norsk verdi cell
   const tdSpNv = document.createElement('td');
   const spNvCell = document.createElement('div');
@@ -1114,7 +1115,7 @@ let calcLogged = false;
 function logCalc() {
   if (calcLogged) return;
   calcLogged = true;
-  navigator.sendBeacon('/opptak/api/calc-log');
+  navigator.sendBeacon('/api/calc-log');
 }
 
 /* ── Privacy modal ── */
@@ -1129,6 +1130,23 @@ closePrivacyBtn.addEventListener('click', closePrivacy);
 privacyOverlay.addEventListener('click', e => { if (e.target === privacyOverlay) closePrivacy(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !privacyOverlay.classList.contains('hidden')) closePrivacy(); });
 openPrivacyBtn.addEventListener('click', e => { e.preventDefault(); openPrivacy(); });
+
+/* ── Disclaimer modal ── */
+const disclaimerOverlay  = document.getElementById('disclaimerOverlay');
+const closeDisclaimerBtn = document.getElementById('closeDisclaimerBtn');
+const openDisclaimerBtn  = document.getElementById('openDisclaimerBtn');
+const DISCLAIMER_KEY     = 'disclaimer_seen_v1';
+
+function openDisclaimer()  { disclaimerOverlay.classList.remove('hidden'); }
+function closeDisclaimer() {
+  disclaimerOverlay.classList.add('hidden');
+  localStorage.setItem(DISCLAIMER_KEY, '1');
+}
+
+closeDisclaimerBtn.addEventListener('click', closeDisclaimer);
+disclaimerOverlay.addEventListener('click', e => { if (e.target === disclaimerOverlay) closeDisclaimer(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !disclaimerOverlay.classList.contains('hidden')) closeDisclaimer(); });
+openDisclaimerBtn.addEventListener('click', e => { e.preventDefault(); openDisclaimer(); });
 
 /* ── Calc count footer ── */
 const apiBase = window.location.pathname.startsWith('/opptak') ? '/opptak/api' : '/api';
@@ -1146,3 +1164,4 @@ fetch(apiBase + '/count')
 createSection();
 renderSaves();
 loadShareFromUrl();
+if (!localStorage.getItem(DISCLAIMER_KEY)) openDisclaimer();

@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Karakteromregner – HH-Utdanning / NMBU</title>
+    <title>Karakteromregner</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
     <div class="header-inner">
-        <div class="label">HH-Utdanning · NMBU</div>
         <h1>Omregning av utenlandske karakterer</h1>
         <p>Beregn norsk karaktersnitt (A–F) basert på utenlandske karakterer og studiepoeng (ECTS)</p>
     </div>
@@ -126,17 +125,31 @@
 </main>
 
 <footer>
-    <p>HH-Utdanning · NMBU &nbsp;·&nbsp; Kilder: UiS, OsloMet og NMBU/Opptakskontoret</p>
+    <p>Syns du verktøyet er nyttig? <a href="https://buymeacoffee.com/anoteng" target="_blank" rel="noopener">Støtt gjerne prosjektet med en kaffe ☕</a></p>
+    <p>Kilder: UiS, OsloMet og NMBU/Opptakskontoret</p>
     <p>
         <a href="https://github.com/anoteng/opptak/blob/main/README.md" target="_blank" rel="noopener">Brukerveiledning</a>
         &nbsp;·&nbsp;
         <a href="https://github.com/anoteng/opptak/">Kildekode</a>
         &nbsp;·&nbsp;
         Lisensiert under <a href="https://www.gnu.org/licenses/gpl-3.0.txt" target="_blank" rel="noopener">GNU GPL v3+</a>
+        &nbsp;·&nbsp;
+        <a href="#" id="openDisclaimerBtn">Ansvarsfraskrivelse</a>
     </p>
     <p><a href="#" id="openPrivacyBtn">Personvern</a></p>
     <p id="calcCountLine" class="hidden">Ca. <span id="calcCount"></span> beregninger utført siden 2026-05-07</p>
 </footer>
+
+<!-- Disclaimer modal -->
+<div id="disclaimerOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="disclaimerTitle">
+    <div class="modal-box">
+        <h2 id="disclaimerTitle">Ansvarsfraskrivelse</h2>
+        <p>Dette verktøyet er ment som en <strong>veiledende pekepinn</strong> og gir ingen garanti for at beregningen samsvarer med den metoden opptakskontoret du søker til faktisk benytter. Ulike institusjoner kan bruke egne omregningsskalaer eller vurderinger.</p>
+        <p>Der det finnes offentliggjorte omregningsskalaer er disse benyttet og kildene er angitt. For land og skalaer der slike kilder ikke finnes, benyttes <strong>lineær interpolasjon</strong> – en matematisk tilnærming som ikke er basert på statistikk om faktisk bruk av skalaene. Dette er merket i verktøyet der det er relevant.</p>
+        <p>Utvikleren fraskriver seg ethvert ansvar for beslutninger som tas på bakgrunn av beregninger gjort i dette verktøyet. Kontakt alltid det aktuelle opptakskontoret for å få bekreftet hvordan karakterene dine vil bli behandlet.</p>
+        <button class="btn btn-primary" id="closeDisclaimerBtn">Jeg forstår</button>
+    </div>
+</div>
 
 <!-- Privacy modal -->
 <div id="privacyOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
